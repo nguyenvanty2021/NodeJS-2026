@@ -1,0 +1,9 @@
+{
+  "name": "NodeJS",
+  "version": "1.0.0",
+  "description": "vanty mern stack",
+  "main": "src/server.js",
+  "author": "vanty",
+  "license": "MIT",
+  "private": true
+}
