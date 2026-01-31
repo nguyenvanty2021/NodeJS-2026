@@ -1,5 +1,5 @@
 {
-  "name": "NodeJS",
+  "name": "nodejs",
   "version": "1.0.0",
   "description": "vanty mern stack",
   "main": "src/server.js",
@@ -7,7 +7,26 @@
   "license": "MIT",
   "private": true,
   "type": "module",
+  "scripts": {
+    "lint": "eslint src --ext js --report-unused-disable-directives --max-warnings 0",
+    "clean": "rm -rf build && mkdir build",
+    "build-babel": "babel ./src -d ./build/src",
+    "build": "npm run clean && npm run build-babel",
+    "production": "npm run build && node ./build/src/server.js",
+    "dev": "nodemon --exec babel-node ./src/server.js"
+  },
   "dependencies": {
     "express": "^5.2.1"
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.28.6",
+    "@babel/core": "^7.28.6",
+    "@babel/eslint-parser": "^7.28.6",
+    "@babel/node": "^7.28.6",
+    "@babel/plugin-transform-runtime": "^7.28.5",
+    "@babel/preset-env": "^7.28.6",
+    "babel-plugin-module-resolver": "^5.0.2",
+    "eslint": "8",
+    "nodemon": "^3.1.11"
   }
 }
