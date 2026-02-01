@@ -23,10 +23,12 @@ const addNewBoard = async (req, res, next) => {
 
   try {
     // eslint-disable-next-line no-console
-    console.log(req.body)
+    // console.log(req.body)
     // abortEarly: false - trả về tất cả các lỗi validation thay vì chỉ dừng ở lỗi đầu tiên => nghĩa là trả về error tất cả các field chứ không phải chỉ duy nhất 1 field đầu tiên
     await correctCondition.validateAsync(req.body, { abortEarly: false })
-    res.status(StatusCodes.CREATED).json({ message: 'POST from Validation: API create new board' })
+    // res.status(StatusCodes.CREATED).json({ message: 'POST from Validation: API create new board' })
+    // next() này chạy sang tham số thứ 2 là: boardController.addNewBoard trong file routes/v1/board-routes.js
+    next()
   } catch (error) {
     // eslint-disable-next-line no-console
     console.log(error)
