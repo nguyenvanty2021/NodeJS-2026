@@ -6,7 +6,9 @@ import { APIs_V1 } from '~/routes/v1'
 
 const START_SERVER = () => {
   const app = express()
-
+  // Enable req.body JSON data - Middleware để parse dữ liệu JSON từ request body
+  // Nếu không có middleware này, req.body sẽ là undefined khi client gửi JSON data
+  app.use(express.json())
   app.use('/v1', APIs_V1)
 
   app.listen(env.APP_PORT, env.APP_HOST, () => {
