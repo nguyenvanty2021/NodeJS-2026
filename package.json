@@ -6,7 +6,6 @@
   "author": "vanty",
   "license": "MIT",
   "private": true,
-  "type": "module",
   "scripts": {
     "lint": "eslint src --ext js --report-unused-disable-directives --max-warnings 0",
     "clean": "rm -rf build && mkdir build",
@@ -16,7 +15,11 @@
     "dev": "nodemon --exec babel-node ./src/server.js"
   },
   "dependencies": {
-    "express": "^5.2.1"
+    "@babel/runtime": "^7.28.6",
+    "async-exit-hook": "^2.0.1",
+    "dotenv": "^17.2.3",
+    "express": "^5.2.1",
+    "mongodb": "^7.0.0"
   },
   "devDependencies": {
     "@babel/cli": "^7.28.6",
