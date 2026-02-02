@@ -1,5 +1,6 @@
 import Joi from 'joi'
 import { StatusCodes } from 'http-status-codes'
+import ApiError from '~/utils/api-error'
 
 const addNewBoard = async (req, res, next) => {
   const correctCondition = Joi.object({
@@ -30,12 +31,14 @@ const addNewBoard = async (req, res, next) => {
     // next() này chạy sang tham số thứ 2 là: boardController.addNewBoard trong file routes/v1/board-routes.js
     next()
   } catch (error) {
-    // eslint-disable-next-line no-console
-    console.log(error)
-    // console.log(new Error(error))
-    res.status(StatusCodes.UNPROCESSABLE_ENTITY).json({
-      errors: new Error(error).message
-    })
+    /**
+     * Tại sao dùng ApiError thay vì next(error)?
+     * - Nếu dùng next(error) thì middleware sẽ mặc định trả về status 500 (INTERNAL_SERVER_ERROR)
+     * - Nhưng lỗi validation là lỗi từ phía client gửi dữ liệu sai, nên cần trả về status 422 (UNPROCESSABLE_ENTITY)
+     * - ApiError cho phép ta kiểm soát chính xác HTTP status code trả về
+     * - new Error(error).message để convert Joi ValidationError thành string message đẹp hơn
+     */
+    next(new ApiError(StatusCodes.UNPROCESSABLE_ENTITY, new Error(error).message))
   }
 }
 
