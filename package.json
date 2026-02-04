@@ -11,12 +11,13 @@
     "clean": "rm -rf build && mkdir build",
     "build-babel": "babel ./src -d ./build/src",
     "build": "npm run clean && npm run build-babel",
-    "production": "npm run build && node ./build/src/server.js",
-    "dev": "nodemon --exec babel-node ./src/server.js"
+    "production": "npm run build && cross-env BUILD_MODE=production node ./build/src/server.js",
+    "dev": "cross-env BUILD_MODE=development nodemon --exec babel-node ./src/server.js"
   },
   "dependencies": {
     "@babel/runtime": "^7.28.6",
     "async-exit-hook": "^2.0.1",
+    "cross-env": "^10.1.0",
     "dotenv": "^17.2.3",
     "express": "^5.2.1",
     "http-status-codes": "^2.3.0",
