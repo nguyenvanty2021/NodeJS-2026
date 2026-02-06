@@ -9,6 +9,7 @@ Router.route('/')
   .get((req, res) => {
     res.status(StatusCodes.OK).json({ message: 'GET: API get list boards' })
   })
+  // phải pass validation trước sau đó mới đẩy qua controller
   .post(boardValidation.addNewBoard, boardController.addNewBoard)
 
 export const boardRoutes = Router
