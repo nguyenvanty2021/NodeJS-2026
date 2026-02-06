@@ -24,7 +24,7 @@ const validateBeforeCreate = async (data) => {
   return await BOARD_COLLECTION_SCHEMA.validateAsync(data, { abortEarly: false })
 }
 
-const createNew = async (data) => {
+const addNewBoard = async (data) => {
   try {
     const validData = await validateBeforeCreate(data)
     // eslint-disable-next-line no-console
@@ -43,10 +43,19 @@ const findOneById = async (_id) => {
     return result
   } catch (error) { throw new Error(error) }
 }
+// query tổng hợp (aggregate) để lấy toàn bộ columns and cards thuộc về board
+const getBoardById = async (id) => {
+  try {
+    // Hôm nay tạm thời giống hệt hàm findOneById - và sẽ update phần aggregate tiếp ở những video tới
+    const result = await GET_DB().collection(BOARD_COLLECTION_NAME).findOne({ _id: new ObjectId(id) })
+    return result
+  } catch (error) { throw new Error(error) }
+}
 
 export const boardModel = {
   BOARD_COLLECTION_NAME,
   BOARD_COLLECTION_SCHEMA,
-  createNew,
-  findOneById
+  addNewBoard,
+  findOneById,
+  getBoardById
 }

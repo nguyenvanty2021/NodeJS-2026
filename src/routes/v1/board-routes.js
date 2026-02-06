@@ -12,4 +12,8 @@ Router.route('/')
   // phải pass validation trước sau đó mới đẩy qua controller
   .post(boardValidation.addNewBoard, boardController.addNewBoard)
 
+Router.route('/:id')
+  .get(boardController.getBoardById)
+  // .put() // update - sẽ thêm handler sau
+
 export const boardRoutes = Router

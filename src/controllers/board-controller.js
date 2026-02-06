@@ -16,6 +16,16 @@ const addNewBoard = async (req, res, next) => {
   }
 }
 
+const getBoardById = async (req, res, next) => {
+  try {
+    const boardId = req.params.id // id này là id bên router: Router.route('/:id') => Router.route('/:idparams') thì sẽ là: req.params.idparams
+    // Sau này ở khóa MERN Stack Advance nâng cao học trực tiếp sẽ có thêm userId nữa để chỉ lấy board thuộc về user đó thôi chẳng hạn...vv
+    const board = await boardService.getBoardById(boardId)
+    res.status(StatusCodes.OK).json(board)
+  } catch (error) { next(error) }
+}
+
 export const boardController = {
-  addNewBoard
+  addNewBoard,
+  getBoardById
 }
