@@ -1,6 +1,7 @@
 import Joi from 'joi'
 import { StatusCodes } from 'http-status-codes'
 import ApiError from '~/utils/api-error'
+import { BOARD_TYPE } from '~/utils/constants'
 
 const addNewBoard = async (req, res, next) => {
   const correctCondition = Joi.object({
@@ -19,7 +20,13 @@ const addNewBoard = async (req, res, next) => {
       'string.min': 'Description length must be at least 3 characters long',
       'string.max': 'Description length must be less than or equal to 256 characters long',
       'string.trim': 'Description must not have leading or trailing whitespace'
-    })
+    }),
+    type: Joi.string().valid(BOARD_TYPE.PUBLIC, BOARD_TYPE.PRIVATE).required()
+    // .messages({
+    //   'any.required': 'Type is required',
+    //   'string.empty': 'Type is not allowed to be empty',
+    //   'any.only': 'Type must be either public or private'
+    // })
   })
 
   try {

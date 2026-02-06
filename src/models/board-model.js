@@ -2,6 +2,9 @@ import Joi from 'joi'
 import { OBJECT_ID_RULE, OBJECT_ID_RULE_MESSAGE } from '~/utils/validators'
 import { GET_DB } from '~/config/mongodb'
 import { ObjectId } from 'mongodb'
+import { BOARD_TYPE } from '~/utils/constants'
+import { columnModel } from '~/models/column-model'
+import { cardModel } from '~/models/card-model'
 
 // Define Collection (name & schema)
 const BOARD_COLLECTION_NAME = 'boards'
@@ -9,7 +12,7 @@ const BOARD_COLLECTION_SCHEMA = Joi.object({
   title: Joi.string().required().min(3).max(50).trim().strict(),
   slug: Joi.string().required().min(3).trim().strict(),
   description: Joi.string().required().min(3).max(256).trim().strict(),
-
+  type: Joi.string().valid(BOARD_TYPE.PUBLIC, BOARD_TYPE.PRIVATE).required(),
   // Lưu ý các item trong mảng columnOrderIds là ObjectId nên cần thêm pattern cho chuẩn nhé, (lúc quay video số 57 mình quên nhưng sang đầu video sau sẽ bổ sung)
   columnOrderIds: Joi.array().items(
     Joi.string().pattern(OBJECT_ID_RULE).message(OBJECT_ID_RULE_MESSAGE)
@@ -47,8 +50,43 @@ const findOneById = async (_id) => {
 const getBoardById = async (id) => {
   try {
     // Hôm nay tạm thời giống hệt hàm findOneById - và sẽ update phần aggregate tiếp ở những video tới
-    const result = await GET_DB().collection(BOARD_COLLECTION_NAME).findOne({ _id: new ObjectId(id) })
-    return result
+    // const result = await GET_DB().collection(BOARD_COLLECTION_NAME).findOne({ _id: new ObjectId(id) })
+    const result = await GET_DB().collection(BOARD_COLLECTION_NAME).aggregate([
+      { $match: {
+        _id: new ObjectId(id),
+        _destroy: false
+      } },
+      // Khi bạn chỉ get board theo ID, bạn chỉ nhận được:
+      // { _id: ObjectId("690d2b84a123456789abcdef"), title: "Board 1", ... }
+      // Bạn chưa nhận được columns và cards thuộc về board đó.
+      // Để lấy được columns và cards thuộc về board, bạn cần sử dụng $lookup để join với column collection.
+      // Quan hệ: 1 Board → Nhiều Columns (One-to-Many)
+      // - 1 Board có thể có nhiều Columns
+      // - 1 Column chỉ thuộc về 1 Board duy nhất (thông qua field boardId)
+      // => get all columns có boardId = id current board
+      { $lookup: {
+        from: columnModel.COLUMN_COLLECTION_NAME, // Tìm trong bảng 'columns'
+        localField: '_id', // Lấy _id của board hiện tại
+        foreignField: 'boardId', // So sánh với field 'boardId' trong columns
+        as: 'columns' // Kết quả đặt vào field 'columns'
+      } },
+      // Sau khi $lookup, bạn sẽ nhận được:
+      // { _id: ObjectId("690d2b84a123456789abcdef"), title: "Board 1", ..., columns: [ { _id: ObjectId("690d2b84a123456789abcdee"), title: "Column 1", ... }, ... ] }
+      // => get all cards có boardId = id current board
+      { $lookup: {
+        from: cardModel.CARD_COLLECTION_NAME, // Tìm trong bảng 'cards'
+        localField: '_id', // Lấy _id của board hiện tại
+        foreignField: 'boardId', // So sánh với field 'boardId' trong cards
+        as: 'cards' // Kết quả đặt vào field 'cards'
+      } }
+    ]).next()
+    // 1 board có nhiều columns và nhiều cards
+    // 1 column chỉ thuộc về 1 board
+    // 1 column có nhiều cards
+    // 1 card chỉ thuộc về 1 column và 1 board
+    return result || null
+    // .toArray() // có thể thay thế .toArray() thành .next() cũng được
+    // return result?.[0] || null // nếu dùng .next() thì chỉ cần return result || {}
   } catch (error) { throw new Error(error) }
 }
 
