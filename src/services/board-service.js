@@ -38,7 +38,16 @@ const getBoardById = async (boardId) => {
   } catch (error) { throw error }
 }
 
+const getAllBoard = async () => {
+  // eslint-disable-next-line no-useless-catch
+  try {
+    const boards = await boardModel.getAllBoard()
+    return boards
+  } catch (error) { throw error }
+}
+
 export const boardService = {
   addNewBoard,
-  getBoardById
+  getBoardById,
+  getAllBoard
 }

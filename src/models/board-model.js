@@ -52,10 +52,18 @@ const getBoardById = async (id) => {
   } catch (error) { throw new Error(error) }
 }
 
+const getAllBoard = async () => {
+  try {
+    const result = await GET_DB().collection(BOARD_COLLECTION_NAME).find({}).toArray()
+    return result
+  } catch (error) { throw new Error(error) }
+}
+
 export const boardModel = {
   BOARD_COLLECTION_NAME,
   BOARD_COLLECTION_SCHEMA,
   addNewBoard,
   findOneById,
-  getBoardById
+  getBoardById,
+  getAllBoard
 }

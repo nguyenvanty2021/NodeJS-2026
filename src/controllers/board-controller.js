@@ -25,7 +25,15 @@ const getBoardById = async (req, res, next) => {
   } catch (error) { next(error) }
 }
 
+const getAllBoard = async (req, res, next) => {
+  try {
+    const boards = await boardService.getAllBoard()
+    res.status(StatusCodes.OK).json(boards)
+  } catch (error) { next(error) }
+}
+
 export const boardController = {
   addNewBoard,
-  getBoardById
+  getBoardById,
+  getAllBoard
 }
