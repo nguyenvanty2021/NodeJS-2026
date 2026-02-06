@@ -1,12 +1,19 @@
 import express from 'express'
+import cors from 'cors'
 import { CONNECT_DB, CLOSE_DB } from '~/config/mongodb'
 import exitHook from 'async-exit-hook'
 import { env } from '~/config/environment'
 import { APIs_V1 } from '~/routes/v1'
 import { errorHandlingMiddleware } from '~/middlewares/error-handling-middleware'
+import { corsOptions } from '~/config/cors'
 
 const START_SERVER = () => {
   const app = express()
+
+  // Xử lý CORS (Cross-Origin Resource Sharing) - cho phép hoặc chặn request từ các domain khác
+  // Bảo vệ API khỏi bị gọi từ những domain không được phép
+  app.use(cors(corsOptions))
+
   // Enable req.body JSON data - Middleware để parse dữ liệu JSON từ request body
   // Nếu không có middleware này, req.body sẽ là undefined khi client gửi JSON data
   app.use(express.json())
