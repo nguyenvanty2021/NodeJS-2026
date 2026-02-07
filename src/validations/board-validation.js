@@ -2,7 +2,6 @@ import Joi from 'joi'
 import { StatusCodes } from 'http-status-codes'
 import ApiError from '~/utils/api-error'
 import { BOARD_TYPE } from '~/utils/constants'
-import { OBJECT_ID_RULE, OBJECT_ID_RULE_MESSAGE } from '~/utils/validators'
 
 const addNewBoard = async (req, res, next) => {
   const correctCondition = Joi.object({
@@ -22,10 +21,7 @@ const addNewBoard = async (req, res, next) => {
       'string.max': 'Description length must be less than or equal to 256 characters long',
       'string.trim': 'Description must not have leading or trailing whitespace'
     }),
-    type: Joi.string().valid(BOARD_TYPE.PUBLIC, BOARD_TYPE.PRIVATE).required(),
-    columnOrderIds: Joi.array().items(
-      Joi.string().pattern(OBJECT_ID_RULE).message(OBJECT_ID_RULE_MESSAGE)
-    ).default([])
+    type: Joi.string().valid(BOARD_TYPE.PUBLIC, BOARD_TYPE.PRIVATE).required()
     // .messages({
     //   'any.required': 'Type is required',
     //   'string.empty': 'Type is not allowed to be empty',
@@ -53,6 +49,28 @@ const addNewBoard = async (req, res, next) => {
   }
 }
 
+const updateBoard = async (req, res, next) => {
+  // tính năng update thì bỏ required đi
+  const correctCondition = Joi.object({
+    title: Joi.string().min(3).max(50).trim().strict(),
+    description: Joi.string().min(3).max(256).trim().strict(),
+    type: Joi.string().valid(BOARD_TYPE.PUBLIC, BOARD_TYPE.PRIVATE)
+  })
+
+  try {
+    // abortEarly: false - trả về tất cả các lỗi validation thay vì chỉ dừng ở lỗi đầu tiên => nghĩa là trả về error tất cả các field chứ không phải chỉ duy nhất 1 field đầu tiên
+    // allowUnknown: true - cho phép request body chứa các field không được định nghĩa trong schema mà không báo lỗi
+    // Ví dụ: khi update board, client có thể gửi thêm columnOrderIds, cardOrderIds...
+    // mà không cần phải khai báo tất cả trong validation schema
+    // Nếu không có allowUnknown: true, Joi sẽ báo lỗi "field is not allowed" cho những field không có trong schema
+    await correctCondition.validateAsync(req.body, { abortEarly: false, allowUnknown: true })
+    next()
+  } catch (error) {
+    next(new ApiError(StatusCodes.UNPROCESSABLE_ENTITY, new Error(error).message))
+  }
+}
+
 export const boardValidation = {
-  addNewBoard
+  addNewBoard,
+  updateBoard
 }

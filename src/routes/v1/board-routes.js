@@ -11,6 +11,6 @@ Router.route('/')
 
 Router.route('/:id')
   .get(boardController.getBoardById)
-  // .put() // update - sẽ thêm handler sau
+  .put(boardValidation.updateBoard, boardController.updateBoard)
 
 export const boardRoutes = Router

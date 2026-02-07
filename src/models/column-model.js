@@ -51,7 +51,7 @@ const pushCardOrderIds = async (card) => {
       { $push: { cardOrderIds: new ObjectId(card._id) } }, // mỗi khi column được tạo thì sau đó column sẽ được push vào cuối mảng theo id của boardId nằm trong column
       { returnDocument: 'after' } // trả về document sau khi update => hay nói 1 cách dễ hiểu hơn là return về object sau khi push column vào field columnOrderIds
     )
-    return result.value
+    return result
   } catch (error) { throw new Error(error) }
 }
 

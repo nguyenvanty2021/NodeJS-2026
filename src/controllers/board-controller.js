@@ -32,8 +32,18 @@ const getAllBoard = async (req, res, next) => {
   } catch (error) { next(error) }
 }
 
+const updateBoard = async (req, res, next) => {
+  try {
+    const boardId = req.params.id
+    const updatedBoard = await boardService.updateBoard({ boardId, reqBody: req.body })
+
+    res.status(StatusCodes.OK).json(updatedBoard)
+  } catch (error) { next(error) }
+}
+
 export const boardController = {
   addNewBoard,
   getBoardById,
-  getAllBoard
+  getAllBoard,
+  updateBoard
 }
