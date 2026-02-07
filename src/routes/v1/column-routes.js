@@ -8,4 +8,7 @@ Router.route('/')
   // phải pass validation trước sau đó mới đẩy qua controller
   .post(columnValidation.addNewColumn, columnController.addNewColumn)
 
+Router.route('/:id')
+  .put(columnValidation.updateColumn, columnController.updateColumn)
+
 export const columnRoutes = Router

@@ -1,6 +1,7 @@
 import { slugify } from '~/utils/formatters'
 import { columnModel } from '~/models/column-model'
 import { boardModel } from '../models/board-model'
+import { ObjectId } from 'mongodb'
 
 const addNewColumn = async (reqBody) => {
   // eslint-disable-next-line no-useless-catch
@@ -32,7 +33,20 @@ const addNewColumn = async (reqBody) => {
     return getNewColumn
   } catch (error) { throw error }
 }
+const updateColumn = async ({ columnId, reqBody }) => {
+  // eslint-disable-next-line no-useless-catch
+  try {
+    const updateData = { ...reqBody, updatedAt: Date.now() }
+    // Convert cardOrderIds từ string sang ObjectId nếu có
+    if (updateData?.cardOrderIds?.length > 0) {
+      updateData.cardOrderIds = updateData.cardOrderIds.map(id => new ObjectId(id))
+    }
+    const updatedColumn = await columnModel.updateColumn({ columnId, objectColumn: updateData })
+    return updatedColumn
+  } catch (error) { throw error }
+}
 
 export const columnService = {
-  addNewColumn
+  addNewColumn,
+  updateColumn
 }

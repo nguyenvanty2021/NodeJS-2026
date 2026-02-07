@@ -54,11 +54,29 @@ const pushCardOrderIds = async (card) => {
     return result
   } catch (error) { throw new Error(error) }
 }
+const INVALID_UPDATE_FIELDS = ['_id', 'boardId', 'createdAt']
+
+const updateColumn = async ({ columnId, objectColumn }) => {
+  try {
+    Object.keys(objectColumn).forEach(key => {
+      if (INVALID_UPDATE_FIELDS.includes(key)) {
+        delete objectColumn[key]
+      }
+    })
+    const result = await GET_DB().collection(COLUMN_COLLECTION_NAME).findOneAndUpdate(
+      { _id: new ObjectId(columnId) },
+      { $set: objectColumn },
+      { returnDocument: 'after' }
+    )
+    return result
+  } catch (error) { throw new Error(error) }
+}
 
 export const columnModel = {
   COLUMN_COLLECTION_NAME,
   COLUMN_COLLECTION_SCHEMA,
   pushCardOrderIds,
   addNewColumn,
-  findOneById
+  findOneById,
+  updateColumn
 }
