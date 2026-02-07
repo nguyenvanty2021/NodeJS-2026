@@ -80,6 +80,7 @@ const getBoardById = async (id) => {
         as: 'cards' // Kết quả đặt vào field 'cards'
       } }
     ]).next()
+    console.log(123)
     // 1 board có nhiều columns và nhiều cards
     // 1 column chỉ thuộc về 1 board
     // 1 column có nhiều cards
@@ -97,11 +98,25 @@ const getAllBoard = async () => {
   } catch (error) { throw new Error(error) }
 }
 
+
+// Nhiệm vụ của func này là push một cái giá trị columnId vào cuối mảng columnOrderIds
+const pushColumnOrderIds = async (column) => {
+  try {
+    const result = await GET_DB().collection(BOARD_COLLECTION_NAME).findOneAndUpdate(
+      { _id: new ObjectId(column.boardId) },
+      { $push: { columnOrderIds: new ObjectId(column._id) } }, // mỗi khi column được tạo thì sau đó column sẽ được push vào cuối mảng theo id của boardId nằm trong column
+      { returnDocument: 'after' } // trả về document sau khi update => hay nói 1 cách dễ hiểu hơn là return về object sau khi push column vào field columnOrderIds
+    )
+    return result.value
+  } catch (error) { throw new Error(error) }
+}
+
 export const boardModel = {
   BOARD_COLLECTION_NAME,
   BOARD_COLLECTION_SCHEMA,
   addNewBoard,
   findOneById,
   getBoardById,
-  getAllBoard
+  getAllBoard,
+  pushColumnOrderIds
 }

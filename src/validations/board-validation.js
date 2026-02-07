@@ -2,6 +2,7 @@ import Joi from 'joi'
 import { StatusCodes } from 'http-status-codes'
 import ApiError from '~/utils/api-error'
 import { BOARD_TYPE } from '~/utils/constants'
+import { OBJECT_ID_RULE, OBJECT_ID_RULE_MESSAGE } from '~/utils/validators'
 
 const addNewBoard = async (req, res, next) => {
   const correctCondition = Joi.object({
@@ -21,7 +22,10 @@ const addNewBoard = async (req, res, next) => {
       'string.max': 'Description length must be less than or equal to 256 characters long',
       'string.trim': 'Description must not have leading or trailing whitespace'
     }),
-    type: Joi.string().valid(BOARD_TYPE.PUBLIC, BOARD_TYPE.PRIVATE).required()
+    type: Joi.string().valid(BOARD_TYPE.PUBLIC, BOARD_TYPE.PRIVATE).required(),
+    columnOrderIds: Joi.array().items(
+      Joi.string().pattern(OBJECT_ID_RULE).message(OBJECT_ID_RULE_MESSAGE)
+    ).default([])
     // .messages({
     //   'any.required': 'Type is required',
     //   'string.empty': 'Type is not allowed to be empty',

@@ -34,6 +34,7 @@ const getBoardById = async (boardId) => {
   // eslint-disable-next-line no-useless-catch
   try {
     const board = await boardModel.getBoardById(boardId)
+    console.log('board: ', board)
     if (!board) throw new ApiError(StatusCodes.NOT_FOUND, 'Board not found')
 
     const resBoard = cloneDeep(board)

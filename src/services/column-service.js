@@ -1,0 +1,38 @@
+import { slugify } from '~/utils/formatters'
+import { columnModel } from '~/models/column-model'
+import { boardModel } from '../models/board-model'
+
+const addNewColumn = async (reqBody) => {
+  // eslint-disable-next-line no-useless-catch
+  try {
+    // Xử lý logic dữ liệu tùy đặc thù dự án
+    const newColumn = {
+      ...reqBody,
+      slug: slugify(reqBody.title)
+    }
+
+    // Gọi tới tầng Model để xử lý lưu bản ghi newBoard vào trong Database
+    const createdColumn = await columnModel.addNewColumn(newColumn)
+
+    // Lấy bản ghi board sau khi gọi (tùy mục đích dự án mà có cần bước này hay không)
+    // eslint-disable-next-line no-console
+    const getNewColumn = await columnModel.findOneById(createdColumn.insertedId)
+    // eslint-disable-next-line no-console
+    console.log(getNewColumn)
+    // vì khi add 1 column thì mặc định phải truyền thêm boardId => nghĩa là đã xác định column này có liên quan đến board nào rồi
+    // => nên khi tạo xong 1 column mình phải update lại field columnOrderIds trong board theo boardId đó
+    if (getNewColumn) {
+      getNewColumn.cards = []
+      await boardModel.pushColumnOrderIds(getNewColumn)
+    }
+    // Làm thêm các xử lý logic khác với các Collection khác tùy đặc thù dự án...vv
+    // Bắn email, notification về cho admin khi có 1 cái board mới được tạo...vv
+
+    // Trả kết quả về, trong Service luôn phải có return
+    return getNewColumn
+  } catch (error) { throw error }
+}
+
+export const columnService = {
+  addNewColumn
+}
