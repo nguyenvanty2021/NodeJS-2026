@@ -22,10 +22,19 @@ const START_SERVER = () => {
   // middleware xử lý lỗi tập trung
   app.use(errorHandlingMiddleware)
 
-  app.listen(env.APP_PORT, env.APP_HOST, () => {
-    // eslint-disable-next-line no-console
-    console.log(`3. Hi ${env.AUTHOR}, I am running at http://${env.APP_HOST}:${env.APP_PORT}/`)
-  })
+  if (env.BUILD_MODE === 'production') {
+    // Production (Render): listen trên 0.0.0.0 để Render detect được port
+    app.listen(env.APP_PORT, () => {
+      // eslint-disable-next-line no-console
+      console.log(`3. Hi ${env.AUTHOR}, I am running at port ${env.APP_PORT}/ in production mode`)
+    })
+  } else {
+    // Development: listen trên localhost
+    app.listen(env.APP_PORT, env.APP_HOST, () => {
+      // eslint-disable-next-line no-console
+      console.log(`3. Hi ${env.AUTHOR}, I am running at http://${env.APP_HOST}:${env.APP_PORT}/`)
+    })
+  }
   // thực hiện các tác vụ cleanup trước khi dừng server
   exitHook(() => {
     // eslint-disable-next-line no-console
