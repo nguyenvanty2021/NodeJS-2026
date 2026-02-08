@@ -1,7 +1,10 @@
 import { slugify } from '~/utils/formatters'
 import { columnModel } from '~/models/column-model'
+import { cardModel } from '~/models/card-model'
 import { boardModel } from '../models/board-model'
 import { ObjectId } from 'mongodb'
+import { StatusCodes } from 'http-status-codes'
+import ApiError from '~/utils/api-error'
 
 const addNewColumn = async (reqBody) => {
   // eslint-disable-next-line no-useless-catch
@@ -45,8 +48,26 @@ const updateColumn = async ({ columnId, reqBody }) => {
     return updatedColumn
   } catch (error) { throw error }
 }
+const deleteColumn = async ({ columnId }) => {
+  // eslint-disable-next-line no-useless-catch
+  try {
+    const targetColumn = await columnModel.findOneById(columnId)
+    if (!targetColumn) {
+      throw new ApiError(StatusCodes.NOT_FOUND, 'Column not found!')
+    }
+    // Xóa Column
+    await columnModel.deleteOneById(columnId)
+    // Xóa toàn bộ Cards thuộc Column trên
+    await cardModel.deleteManyByColumnId(columnId)
+    // Sau khi xóa column thì phải xóa luôn column này trong board => vì 1 board sẽ có nhiều column và nhiều card
+    await boardModel.pullColumnOrderIds({ columnId, boardId: targetColumn.boardId })
+
+    return { deleteResult: 'Column and its Cards deleted successfully!' }
+  } catch (error) { throw error }
+}
 
 export const columnService = {
   addNewColumn,
-  updateColumn
+  updateColumn,
+  deleteColumn
 }

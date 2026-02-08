@@ -128,6 +128,17 @@ const updateBoard = async ({ boardId, objectBoard }) => {
     return result
   } catch (error) { throw new Error(error) }
 }
+// Nhiệm vụ của func này là pull một cái giá trị columnId ra khỏi mảng columnOrderIds => có thể hiểu là xóa column này khỏi field columnOrderIds trong board
+const pullColumnOrderIds = async ({ boardId, columnId }) => {
+  try {
+    const result = await GET_DB().collection(BOARD_COLLECTION_NAME).findOneAndUpdate(
+      { _id: new ObjectId(boardId) },
+      { $pull: { columnOrderIds: new ObjectId(columnId) } }, // vì là pull nên có nghĩa là: xóa hay kéo column này ra khỏi list columnOrderIds theo boardId này
+      { returnDocument: 'after' }
+    )
+    return result
+  } catch (error) { throw new Error(error) }
+}
 
 export const boardModel = {
   BOARD_COLLECTION_NAME,
@@ -137,5 +148,6 @@ export const boardModel = {
   getBoardById,
   getAllBoard,
   pushColumnOrderIds,
+  pullColumnOrderIds,
   updateBoard
 }
