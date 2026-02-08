@@ -8,7 +8,8 @@ export const corsOptions = {
   origin: function (origin, callback) {
     // Cho phép việc gọi API bằng POSTMAN trên môi trường dev,
     // Thông thường khi sử dụng postman thì cái origin sẽ có giá trị là undefined
-    if (!origin && env.BUILD_MODE === 'development') {
+    // không cần thêm !origin && vào điều kiện if vì nếu origin là undefined thì sẽ không vào được if
+    if (env.BUILD_MODE === 'development') {
       return callback(null, true)
     }
 
