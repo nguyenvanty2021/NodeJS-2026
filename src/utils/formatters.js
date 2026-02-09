@@ -33,3 +33,11 @@ export const slugify = (val) => {
  * Original String Test: 'TrungQuanDev Một Lập Trình Viên'
  * Slug Result: trungquandev-mot-lap-trinh-vien
  */
+
+import { pick } from 'lodash'
+
+// Lấy một vài dữ liệu cụ thể trong User để tránh việc trả về các dữ liệu nhạy cảm như hash password
+export const pickData = ({ objectPick, getListFields }) => {
+  if (!objectPick) return {}
+  return pick(objectPick, getListFields)
+}

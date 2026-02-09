@@ -16,7 +16,9 @@
   },
   "dependencies": {
     "@babel/runtime": "^7.28.6",
+    "@getbrevo/brevo": "^2.0.0-beta.4",
     "async-exit-hook": "^2.0.1",
+    "bcryptjs": "^2.4.3",
     "cors": "^2.8.6",
     "cross-env": "^10.1.0",
     "dotenv": "^17.2.3",
@@ -24,7 +26,8 @@
     "http-status-codes": "^2.3.0",
     "joi": "^18.0.2",
     "lodash": "^4.17.23",
-    "mongodb": "^7.0.0"
+    "mongodb": "^7.0.0",
+    "uuid": "^9.0.1"
   },
   "devDependencies": {
     "@babel/cli": "^7.28.6",
