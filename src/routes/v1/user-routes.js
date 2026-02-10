@@ -4,8 +4,21 @@ import { userController } from '~/controllers/user-controller'
 
 const Router = express.Router()
 
+/*
+Quy trình auth như sau:
+1. Register Account => Sau đó gửi url vào email xác thực
+2. User vào gmail đăng ký account click vào url (url này gồm: email user vừa đăng ký và verifyToken (verifyToken này không phải là accessToken mà chỉ là uuid thôi))
+3. Url này ở frontend phải setup router để hiển thị UI và chạy useEffect để call api verifyAccount
+*/
+
 Router.route('/register')
   // phải pass validation trước sau đó mới đẩy qua controller
   .post(userValidation.register, userController.register)
+
+Router.route('/verify')
+  .put(userValidation.verifyAccount, userController.verifyAccount)
+
+Router.route('/login')
+  .post(userValidation.login, userController.login)
 
 export const userRoutes = Router
