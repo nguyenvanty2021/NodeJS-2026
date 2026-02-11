@@ -137,9 +137,41 @@ const refreshToken = async (clientRefreshToken) => {
   } catch (error) { throw error }
 }
 
+const updateAccount = async ({ userId, body: reqBody }) => {
+  // eslint-disable-next-line no-useless-catch
+  try {
+    // Query User và kiểm tra cho chắc chắn
+    const existUser = await userModel.findOneById(userId)
+    if (!existUser) throw new ApiError(StatusCodes.NOT_FOUND, 'Account not found!')
+    if (!existUser.isActive) throw new ApiError(StatusCodes.NOT_ACCEPTABLE, 'Your account is not active!')
+
+    // Khởi tạo kết quả updated User ban đầu là empty
+    let updatedUser = {}
+
+    // Trường hợp change password
+    if (reqBody.current_password && reqBody.new_password) {
+      // Kiểm tra xem cái current_password có đúng hay không
+      if (!bcryptjs.compareSync(reqBody.current_password, existUser.password)) {
+        throw new ApiError(StatusCodes.NOT_ACCEPTABLE, 'Your Current Password is incorrect!')
+      }
+
+      // Nếu như current_password là đúng thì chúng ta sẽ hash một cái mật khẩu mới và update lại vào DB:
+      updatedUser = await userModel.update(existUser._id, {
+        displayName: reqBody.displayName,
+        password: bcryptjs.hashSync(reqBody.new_password, 8)
+      })
+    } else {
+      // Trường hợp update các thông tin chung, ví dụ như displayName
+      updatedUser = await userModel.update(existUser._id, reqBody)
+    }
+
+    return pickData({ objectPick: updatedUser, getListFields: ['_id', 'email', 'username', 'displayName', 'avatar', 'role', 'isActive', 'createdAt', 'updatedAt'] }) } catch (error) { throw error }
+}
+
 export const userService = {
   register,
   verifyAccount,
   login,
-  refreshToken
+  refreshToken,
+  updateAccount
 }

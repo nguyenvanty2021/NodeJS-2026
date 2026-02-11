@@ -1,6 +1,7 @@
 import express from 'express'
 import { userValidation } from '~/validations/user-validation'
 import { userController } from '~/controllers/user-controller'
+import { authMiddleware } from '~/middlewares/auth-middleware'
 
 const Router = express.Router()
 
@@ -26,5 +27,8 @@ Router.route('/logout')
 
 Router.route('/refresh_token')
   .get(userController.refreshToken)
+
+Router.route('/update_account') // router này là dùng để update lại thông tin account sau khi đăng nhập => user login thành công vào bên trong thì bên trong sẽ có page update lại thông tin user
+  .put(authMiddleware.isAuthorized, userValidation.updateAccount, userController.updateAccount)
 
 export const userRoutes = Router
