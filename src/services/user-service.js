@@ -8,6 +8,7 @@ import { WEBSITE_DOMAIN } from '~/utils/constants'
 import { BrevoProvider } from '~/providers/brevo-provider'
 import { env } from '~/config/environment'
 import { JwtProvider } from '~/providers/jwt-providers'
+import { CloudinaryProvider } from '~/providers/cloudinary-providers'
 
 const register = async (reqBody) => {
   // eslint-disable-next-line no-useless-catch
@@ -137,7 +138,7 @@ const refreshToken = async (clientRefreshToken) => {
   } catch (error) { throw error }
 }
 
-const updateAccount = async ({ userId, body: reqBody }) => {
+const updateAccount = async ({ userId, body: reqBody, userAvatarFile }) => {
   // eslint-disable-next-line no-useless-catch
   try {
     // Query User và kiểm tra cho chắc chắn
@@ -145,25 +146,32 @@ const updateAccount = async ({ userId, body: reqBody }) => {
     if (!existUser) throw new ApiError(StatusCodes.NOT_FOUND, 'Account not found!')
     if (!existUser.isActive) throw new ApiError(StatusCodes.NOT_ACCEPTABLE, 'Your account is not active!')
 
-    // Khởi tạo kết quả updated User ban đầu là empty
-    let updatedUser = {}
+    // Khởi tạo object chứa các field cần update
+    let updateData = {}
 
-    // Trường hợp change password
+    // Xử lý đổi mật khẩu (nếu có)
     if (reqBody.current_password && reqBody.new_password) {
       // Kiểm tra xem cái current_password có đúng hay không
       if (!bcryptjs.compareSync(reqBody.current_password, existUser.password)) {
         throw new ApiError(StatusCodes.NOT_ACCEPTABLE, 'Your Current Password is incorrect!')
       }
-
-      // Nếu như current_password là đúng thì chúng ta sẽ hash một cái mật khẩu mới và update lại vào DB:
-      updatedUser = await userModel.update(existUser._id, {
-        displayName: reqBody.displayName,
-        password: bcryptjs.hashSync(reqBody.new_password, 8)
-      })
-    } else {
-      // Trường hợp update các thông tin chung, ví dụ như displayName
-      updatedUser = await userModel.update(existUser._id, reqBody)
+      // Nếu như current_password là đúng thì hash mật khẩu mới
+      updateData.password = bcryptjs.hashSync(reqBody.new_password, 8)
     }
+
+    // Xử lý upload avatar lên Cloudinary (nếu có)
+    if (userAvatarFile) {
+      const uploadResult = await CloudinaryProvider.streamUpload(userAvatarFile.buffer, 'users')
+      updateData.avatar = uploadResult.secure_url
+    }
+
+    // Xử lý update các thông tin chung, ví dụ như displayName (nếu có)
+    if (reqBody.displayName) {
+      updateData.displayName = reqBody.displayName
+    }
+
+    // Gom tất cả lại và update 1 lần duy nhất vào DB
+    const updatedUser = await userModel.update(existUser._id, updateData)
 
     return pickData({ objectPick: updatedUser, getListFields: ['_id', 'email', 'username', 'displayName', 'avatar', 'role', 'isActive', 'createdAt', 'updatedAt'] }) } catch (error) { throw error }
 }
