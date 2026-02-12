@@ -4,6 +4,7 @@ import { GET_DB } from '~/config/mongodb'
 import { ObjectId } from 'mongodb'
 import { BOARD_TYPE } from '~/utils/constants'
 import { columnModel } from '~/models/column-model'
+import { userModel } from '~/models/user-model'
 import { cardModel } from '~/models/card-model'
 import { pagingSkipValue } from '~/utils/algorithms'
 
@@ -40,13 +41,14 @@ const validateBeforeCreate = async (data) => {
   return await BOARD_COLLECTION_SCHEMA.validateAsync(data, { abortEarly: false })
 }
 
-const addNewBoard = async (data) => {
+const addNewBoard = async ({ userId, newBoard }) => {
   try {
-    const validData = await validateBeforeCreate(data)
-    // eslint-disable-next-line no-console
-    console.log('validData: ', validData)
-
-    const createdBoard = await GET_DB().collection(BOARD_COLLECTION_NAME).insertOne(validData)
+    const validData = await validateBeforeCreate(newBoard)
+    const newBoardToAdd = {
+      ...validData,
+      ownerIds: [new ObjectId(userId)]
+    }
+    const createdBoard = await GET_DB().collection(BOARD_COLLECTION_NAME).insertOne(newBoardToAdd)
     return createdBoard
   } catch (error) { throw new Error(error) }
 }
@@ -60,15 +62,22 @@ const findOneById = async (_id) => {
   } catch (error) { throw new Error(error) }
 }
 // query tổng hợp (aggregate) để lấy toàn bộ columns and cards thuộc về board
-const getBoardById = async (id) => {
+const getBoardById = async ({ boardId, userId }) => {
   try {
+
+    const queryConditions = [
+      { _id: new ObjectId(boardId) },
+      { _destroy: false },
+      { $or: [
+        { ownerIds: { $all: [new ObjectId(userId)] } },
+        { memberIds: { $all: [new ObjectId(userId)] } }
+      ] }
+    ]
+
     // Hôm nay tạm thời giống hệt hàm findOneById - và sẽ update phần aggregate tiếp ở những video tới
     // const result = await GET_DB().collection(BOARD_COLLECTION_NAME).findOne({ _id: new ObjectId(id) })
     const result = await GET_DB().collection(BOARD_COLLECTION_NAME).aggregate([
-      { $match: {
-        _id: new ObjectId(id),
-        _destroy: false
-      } },
+      { $match: { $and: queryConditions } },
       // Khi bạn chỉ get board theo ID, bạn chỉ nhận được:
       // { _id: ObjectId("690d2b84a123456789abcdef"), title: "Board 1", ... }
       // Bạn chưa nhận được columns và cards thuộc về board đó.
@@ -91,12 +100,39 @@ const getBoardById = async (id) => {
         localField: '_id', // Lấy _id của board hiện tại
         foreignField: 'boardId', // So sánh với field 'boardId' trong cards
         as: 'cards' // Kết quả đặt vào field 'cards'
+      } },
+      /**
+       * $lookup: Join bảng users để lấy thông tin owners của board
+       * - localField: 'ownerIds' là mảng các ObjectId, MongoDB tự lặp qua từng phần tử để so sánh
+       *   Ví dụ: ownerIds: [ObjectId("user1"), ObjectId("user2")]
+       *   => MongoDB tự tìm user có _id = "user1" và _id = "user2"
+       * - pipeline: xử lý thêm dữ liệu trước khi trả về
+       * - $project: loại bỏ field nhạy cảm (password, verifyToken) để không gửi ra frontend
+       *   Giá trị 0 = exclude (loại bỏ), 1 = include (chỉ lấy)
+       */
+      { $lookup: {
+        from: userModel.USER_COLLECTION_NAME,
+        localField: 'ownerIds',
+        foreignField: '_id',
+        as: 'owners',
+        pipeline: [{ $project: { 'password': 0, 'verifyToken': 0 } }]
+      } },
+      /**
+       * $lookup: Join bảng users để lấy thông tin members của board
+       * - Tương tự owners nhưng dùng localField: 'memberIds'
+       * - Cũng loại bỏ password và verifyToken để bảo mật
+       */
+      { $lookup: {
+        from: userModel.USER_COLLECTION_NAME,
+        localField: 'memberIds',
+        foreignField: '_id',
+        as: 'members',
+        pipeline: [{ $project: { 'password': 0, 'verifyToken': 0 } }]
       } }
     ],
     // Khai báo thêm thuộc tính collation locale 'en' để fix vụ chữ B hoa và a thường ở trên
     { collation: { locale: 'en' } }
     ).next()
-    console.log(123)
     // 1 board có nhiều columns và nhiều cards
     // 1 column chỉ thuộc về 1 board
     // 1 column có nhiều cards

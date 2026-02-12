@@ -5,7 +5,7 @@ import { StatusCodes } from 'http-status-codes'
 import { cloneDeep } from 'lodash'
 import { DEFAULT_PAGE, DEFAULT_LIMIT } from '~/utils/constants'
 
-const addNewBoard = async (reqBody) => {
+const addNewBoard = async ({ userId, reqBody }) => {
   // eslint-disable-next-line no-useless-catch
   try {
     // Xử lý logic dữ liệu tùy đặc thù dự án
@@ -15,7 +15,7 @@ const addNewBoard = async (reqBody) => {
     }
 
     // Gọi tới tầng Model để xử lý lưu bản ghi newBoard vào trong Database
-    const createdBoard = await boardModel.addNewBoard(newBoard)
+    const createdBoard = await boardModel.addNewBoard({ userId, newBoard })
 
     // Lấy bản ghi board sau khi gọi (tùy mục đích dự án mà có cần bước này hay không)
     // eslint-disable-next-line no-console
@@ -31,10 +31,10 @@ const addNewBoard = async (reqBody) => {
   } catch (error) { throw error }
 }
 
-const getBoardById = async (boardId) => {
+const getBoardById = async ({ boardId, userId }) => {
   // eslint-disable-next-line no-useless-catch
   try {
-    const board = await boardModel.getBoardById(boardId)
+    const board = await boardModel.getBoardById({ boardId, userId })
     console.log('board: ', board)
     if (!board) throw new ApiError(StatusCodes.NOT_FOUND, 'Board not found')
 

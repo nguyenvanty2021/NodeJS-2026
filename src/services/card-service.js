@@ -1,6 +1,7 @@
 import { slugify } from '~/utils/formatters'
 import { cardModel } from '~/models/card-model'
 import { columnModel } from '~/models/column-model'
+import { CloudinaryProvider } from '~/providers/cloudinary-providers'
 
 const addNewCard = async (reqBody) => {
   // eslint-disable-next-line no-useless-catch
@@ -30,6 +31,30 @@ const addNewCard = async (reqBody) => {
   } catch (error) { throw error }
 }
 
+
+const updateCard = async ({ cardId, reqBody, cardCoverFile }) => {
+  // eslint-disable-next-line no-useless-catch
+  try {
+    // Khởi tạo object chứa các field cần update
+    let updateData = {
+      ...reqBody,
+      updatedAt: Date.now()
+    }
+
+    // Xử lý upload card cover lên Cloudinary (nếu có) - trường hợp đặc biệt cần xử lý riêng
+    if (cardCoverFile) {
+      const uploadResult = await CloudinaryProvider.streamUpload(cardCoverFile.buffer, 'card-covers')
+      updateData.cover = uploadResult.secure_url
+    }
+
+    // Gom tất cả lại và update 1 lần duy nhất vào DB
+    const updatedCard = await cardModel.updateCard({ cardId, updateData })
+
+    return updatedCard
+  } catch (error) { throw error }
+}
+
 export const cardService = {
-  addNewCard
+  addNewCard,
+  updateCard
 }

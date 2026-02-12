@@ -3,9 +3,10 @@ import { boardService } from '~/services/board-service'
 
 const addNewBoard = async (req, res, next) => {
   try {
+    const userId = req.jwtDecoded._id
     // eslint-disable-next-line no-console
     console.log('req.body: ', req.body)
-    const createdBoard = await boardService.addNewBoard(req.body)
+    const createdBoard = await boardService.addNewBoard({ userId, reqBody: req.body })
     res.status(StatusCodes.CREATED).json(createdBoard)
   } catch (error) {
     // next(error) sẽ chuyển lỗi này sang middleware xử lý lỗi tập trung trong file server.js
@@ -18,9 +19,10 @@ const addNewBoard = async (req, res, next) => {
 
 const getBoardById = async (req, res, next) => {
   try {
+    const userId = req.jwtDecoded._id
     const boardId = req.params.id // id này là id bên router: Router.route('/:id') => Router.route('/:idparams') thì sẽ là: req.params.idparams
     // Sau này ở khóa MERN Stack Advance nâng cao học trực tiếp sẽ có thêm userId nữa để chỉ lấy board thuộc về user đó thôi chẳng hạn...vv
-    const board = await boardService.getBoardById(boardId)
+    const board = await boardService.getBoardById({ userId, boardId })
     res.status(StatusCodes.OK).json(board)
   } catch (error) { next(error) }
 }
