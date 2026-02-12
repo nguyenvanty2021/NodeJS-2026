@@ -3,6 +3,7 @@ import { boardModel } from '~/models/board-model'
 import { ApiError } from '~/utils/api-error'
 import { StatusCodes } from 'http-status-codes'
 import { cloneDeep } from 'lodash'
+import { DEFAULT_PAGE, DEFAULT_LIMIT } from '~/utils/constants'
 
 const addNewBoard = async (reqBody) => {
   // eslint-disable-next-line no-useless-catch
@@ -60,11 +61,16 @@ const updateBoard = async ({ boardId, reqBody }) => {
   } catch (error) { throw error }
 }
 
-const getAllBoard = async () => {
+const getAllBoard = async ({ userId, page, limit }) => {
   // eslint-disable-next-line no-useless-catch
   try {
-    const boards = await boardModel.getAllBoard()
-    return boards
+    // Nếu không tồn tại page hoặc itemsPerPage từ phía FE thì BE sẽ cần phải luôn gán giá trị mặc định
+    if (!page) page = DEFAULT_PAGE
+    if (!limit) limit = DEFAULT_LIMIT
+
+    const results = await boardModel.getAllBoard({ userId, page: parseInt(page, 10), limit: parseInt(limit, 10) })
+
+    return results
   } catch (error) { throw error }
 }
 
