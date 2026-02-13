@@ -6,6 +6,7 @@ import { v4 as uuidv4 } from 'uuid'
 import { pickData } from '~/utils/formatters'
 import { WEBSITE_DOMAIN } from '~/utils/constants'
 import { BrevoProvider } from '~/providers/brevo-provider'
+import { TwilioSmsProvider } from '~/providers/twilio-sms-providers'
 import { env } from '~/config/environment'
 import { JwtProvider } from '~/providers/jwt-providers'
 import { CloudinaryProvider } from '~/providers/cloudinary-providers'
@@ -45,6 +46,16 @@ const register = async (reqBody) => {
 
     // gọi hàm gửi email
     await BrevoProvider.sendEmail({ recipientEmail: getNewUser.email, customSubject, customHtmlContent: htmlContent })
+
+
+    // Gửi sms cho user sau khi đăng ký tài khoản, có thể là sms xác nhận, sms welcome...vv
+    // Bước gửi sms này sẽ là việc gửi hành động đến một dịch vụ bên thứ 3.
+    const smsResponse = await TwilioSmsProvider.sendSMS({
+      to: '+84384943497', // vì là account trial nên sdt to này chỉ gửi được qua sdt đăng ký account thôi
+      body: `Đã gửi email xác thực tài khoản thành công! Vui lòng kiểm tra email của bạn! Hoặc có thể sử dụng verify link: ${verificationLink}`
+    })
+    // eslint-disable-next-line no-console
+    console.log('Twilio SMS Response:', smsResponse)
 
     // return trả về dữ liệu cho phía Controller
     // bỏ password khỏi object getNewUser => không return password sau khi hash cho frontend
