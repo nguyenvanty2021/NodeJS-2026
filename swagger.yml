@@ -1,0 +1,814 @@
+openapi: '3.0.3'
+info:
+  title: Trello Clone - Board Management API
+  description: |
+    RESTful API cho ứng dụng quản lý Board (Trello Clone).
+    Bao gồm các chức năng: Authentication, Board, Column, Card management.
+    
+    **Authentication**: Sử dụng JWT (Bearer Token) với Access Token và Refresh Token (cookie).
+  version: '1.0.0'
+  contact:
+    name: Ty Nguyen
+servers:
+  - url: http://localhost:8017/v1
+    description: Development server
+
+tags:
+  - name: Users
+    description: Đăng ký, đăng nhập, xác thực và quản lý tài khoản
+  - name: Boards
+    description: Quản lý boards (tạo, sửa, xóa, lấy danh sách)
+  - name: Columns
+    description: Quản lý columns trong board
+  - name: Cards
+    description: Quản lý cards trong column
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Access Token lấy từ API login
+
+  schemas:
+    # ========== USER ==========
+    UserRegisterRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+          example: ty@gmail.com
+        password:
+          type: string
+          minLength: 8
+          example: Password123!
+
+    UserLoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+          example: ty@gmail.com
+        password:
+          type: string
+          example: Password123!
+
+    UserVerifyRequest:
+      type: object
+      required: [email, token]
+      properties:
+        email:
+          type: string
+          format: email
+        token:
+          type: string
+          description: Verify token nhận từ email
+
+    UserUpdateRequest:
+      type: object
+      properties:
+        displayName:
+          type: string
+          example: Ty Nguyen
+        current_password:
+          type: string
+          description: Mật khẩu hiện tại (bắt buộc nếu muốn đổi mật khẩu)
+        new_password:
+          type: string
+          description: Mật khẩu mới
+        avatar:
+          type: string
+          format: binary
+          description: File ảnh avatar (upload qua form-data)
+
+    UserResponse:
+      type: object
+      properties:
+        _id:
+          type: string
+        email:
+          type: string
+        username:
+          type: string
+        displayName:
+          type: string
+        avatar:
+          type: string
+          nullable: true
+        role:
+          type: string
+          enum: [client, admin]
+        isActive:
+          type: boolean
+        createdAt:
+          type: number
+        updatedAt:
+          type: number
+          nullable: true
+
+    LoginResponse:
+      type: object
+      properties:
+        accessToken:
+          type: string
+          description: JWT access token
+        user:
+          $ref: '#/components/schemas/UserResponse'
+
+    # ========== BOARD ==========
+    BoardCreateRequest:
+      type: object
+      required: [title, description, type]
+      properties:
+        title:
+          type: string
+          minLength: 3
+          maxLength: 50
+          example: Board mới
+        description:
+          type: string
+          minLength: 3
+          maxLength: 256
+          example: Mô tả board
+        type:
+          type: string
+          enum: [public, private]
+          example: public
+
+    BoardUpdateRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 3
+          maxLength: 50
+        description:
+          type: string
+          minLength: 3
+          maxLength: 256
+        type:
+          type: string
+          enum: [public, private]
+        columnOrderIds:
+          type: array
+          items:
+            type: string
+          description: Mảng các columnId để sắp xếp thứ tự columns
+
+    BoardResponse:
+      type: object
+      properties:
+        _id:
+          type: string
+        title:
+          type: string
+        slug:
+          type: string
+        description:
+          type: string
+        type:
+          type: string
+          enum: [public, private]
+        columnOrderIds:
+          type: array
+          items:
+            type: string
+        ownerIds:
+          type: array
+          items:
+            type: string
+        memberIds:
+          type: array
+          items:
+            type: string
+        createdAt:
+          type: number
+        updatedAt:
+          type: number
+          nullable: true
+
+    BoardDetailResponse:
+      allOf:
+        - $ref: '#/components/schemas/BoardResponse'
+        - type: object
+          properties:
+            columns:
+              type: array
+              items:
+                $ref: '#/components/schemas/ColumnResponse'
+            cards:
+              type: array
+              items:
+                $ref: '#/components/schemas/CardResponse'
+            owners:
+              type: array
+              items:
+                $ref: '#/components/schemas/UserResponse'
+            members:
+              type: array
+              items:
+                $ref: '#/components/schemas/UserResponse'
+
+    BoardListResponse:
+      type: object
+      properties:
+        boards:
+          type: array
+          items:
+            $ref: '#/components/schemas/BoardResponse'
+        totalBoards:
+          type: integer
+          example: 10
+
+    # ========== COLUMN ==========
+    ColumnCreateRequest:
+      type: object
+      required: [boardId, title]
+      properties:
+        boardId:
+          type: string
+          example: 690d2b84a123456789abcdef
+        title:
+          type: string
+          minLength: 3
+          maxLength: 50
+          example: To Do
+
+    ColumnUpdateRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 3
+          maxLength: 50
+        cardOrderIds:
+          type: array
+          items:
+            type: string
+          description: Mảng các cardId để sắp xếp thứ tự cards
+
+    ColumnResponse:
+      type: object
+      properties:
+        _id:
+          type: string
+        boardId:
+          type: string
+        title:
+          type: string
+        slug:
+          type: string
+        cardOrderIds:
+          type: array
+          items:
+            type: string
+        createdAt:
+          type: number
+        updatedAt:
+          type: number
+          nullable: true
+
+    # ========== CARD ==========
+    CardCreateRequest:
+      type: object
+      required: [boardId, columnId, title]
+      properties:
+        boardId:
+          type: string
+          example: 690d2b84a123456789abcdef
+        columnId:
+          type: string
+          example: 690d2b84a123456789abcdee
+        title:
+          type: string
+          minLength: 3
+          maxLength: 50
+          example: Task 1
+
+    CardUpdateRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 3
+          maxLength: 50
+        description:
+          type: string
+        cardCover:
+          type: string
+          format: binary
+          description: File ảnh cover card (upload qua form-data, field name 'cardCover')
+        comments:
+          type: object
+          properties:
+            content:
+              type: string
+          description: Comment mới cho card
+
+    CardResponse:
+      type: object
+      properties:
+        _id:
+          type: string
+        boardId:
+          type: string
+        columnId:
+          type: string
+        title:
+          type: string
+        slug:
+          type: string
+        description:
+          type: string
+          nullable: true
+        cover:
+          type: string
+          nullable: true
+        memberIds:
+          type: array
+          items:
+            type: string
+        comments:
+          type: array
+          items:
+            type: object
+            properties:
+              userId:
+                type: string
+              userEmail:
+                type: string
+              userAvatar:
+                type: string
+              userDisplayName:
+                type: string
+              content:
+                type: string
+              commentedAt:
+                type: number
+        createdAt:
+          type: number
+        updatedAt:
+          type: number
+          nullable: true
+
+    # ========== COMMON ==========
+    ErrorResponse:
+      type: object
+      properties:
+        statusCode:
+          type: integer
+        message:
+          type: string
+        stack:
+          type: string
+
+paths:
+  # ========== STATUS ==========
+  /status:
+    get:
+      summary: Check API status
+      description: Kiểm tra API có hoạt động hay không
+      tags: []
+      responses:
+        '200':
+          description: API đang hoạt động
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: APIs V1 are ready to use.
+                  code:
+                    type: integer
+                    example: 200
+
+  # ========== USERS ==========
+  /users/register:
+    post:
+      summary: Đăng ký tài khoản mới
+      description: Đăng ký tài khoản → gửi email xác thực → user click link verify
+      tags: [Users]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserRegisterRequest'
+      responses:
+        '201':
+          description: Đăng ký thành công, kiểm tra email để xác thực
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Account created successfully! Please check your email to verify.
+        '409':
+          description: Email đã tồn tại
+        '422':
+          description: Dữ liệu không hợp lệ
+
+  /users/verify:
+    put:
+      summary: Xác thực tài khoản qua email
+      description: Verify account sau khi user click link từ email
+      tags: [Users]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserVerifyRequest'
+      responses:
+        '200':
+          description: Xác thực thành công
+        '422':
+          description: Dữ liệu không hợp lệ
+
+  /users/login:
+    post:
+      summary: Đăng nhập
+      description: |
+        Đăng nhập bằng email và password.
+        Trả về accessToken trong body và refreshToken trong cookie httpOnly.
+      tags: [Users]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserLoginRequest'
+      responses:
+        '200':
+          description: Đăng nhập thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+          headers:
+            Set-Cookie:
+              description: refreshToken được set vào httpOnly cookie
+              schema:
+                type: string
+        '401':
+          description: Email hoặc password sai
+        '406':
+          description: Tài khoản chưa được xác thực
+
+  /users/logout:
+    delete:
+      summary: Đăng xuất
+      description: Xóa refreshToken cookie
+      tags: [Users]
+      responses:
+        '200':
+          description: Đăng xuất thành công
+
+  /users/refresh_token:
+    get:
+      summary: Lấy access token mới
+      description: Dùng refreshToken từ cookie để lấy accessToken mới khi token cũ hết hạn
+      tags: [Users]
+      responses:
+        '200':
+          description: Refresh thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  accessToken:
+                    type: string
+        '401':
+          description: Refresh token không hợp lệ hoặc hết hạn
+
+  /users/update_account:
+    put:
+      summary: Cập nhật thông tin tài khoản
+      description: |
+        Cập nhật displayName, đổi mật khẩu, hoặc upload avatar.
+        Gửi dữ liệu qua form-data (multipart) nếu có upload avatar.
+      tags: [Users]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UserUpdateRequest'
+      responses:
+        '200':
+          description: Cập nhật thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '401':
+          description: Chưa đăng nhập
+        '406':
+          description: Mật khẩu hiện tại không đúng
+
+  # ========== BOARDS ==========
+  /boards:
+    get:
+      summary: Lấy danh sách boards
+      description: |
+        Lấy tất cả boards mà user hiện tại là owner hoặc member.
+        Hỗ trợ phân trang và search/filter theo title, description.
+      tags: [Boards]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+          description: Số trang
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 12
+          description: Số board trên mỗi trang
+        - name: queryFilter[title]
+          in: query
+          schema:
+            type: string
+          description: Tìm kiếm theo title (regex, không phân biệt hoa thường)
+        - name: queryFilter[description]
+          in: query
+          schema:
+            type: string
+          description: Tìm kiếm theo description
+      responses:
+        '200':
+          description: Danh sách boards
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BoardListResponse'
+        '401':
+          description: Chưa đăng nhập
+
+    post:
+      summary: Tạo board mới
+      description: Tạo board mới, user hiện tại sẽ là owner
+      tags: [Boards]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BoardCreateRequest'
+      responses:
+        '201':
+          description: Tạo board thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BoardResponse'
+        '401':
+          description: Chưa đăng nhập
+        '422':
+          description: Dữ liệu không hợp lệ
+
+  /boards/{id}:
+    get:
+      summary: Lấy chi tiết board theo ID
+      description: |
+        Lấy chi tiết board kèm theo columns, cards, owners và members.
+        Dùng MongoDB aggregate pipeline với $lookup để join các collections.
+      tags: [Boards]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Board ID (ObjectId)
+      responses:
+        '200':
+          description: Chi tiết board
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BoardDetailResponse'
+        '401':
+          description: Chưa đăng nhập
+        '404':
+          description: Không tìm thấy board
+
+    put:
+      summary: Cập nhật board
+      description: Cập nhật title, description, type hoặc columnOrderIds (kéo thả columns)
+      tags: [Boards]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Board ID (ObjectId)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BoardUpdateRequest'
+      responses:
+        '200':
+          description: Cập nhật thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BoardResponse'
+        '401':
+          description: Chưa đăng nhập
+        '422':
+          description: Dữ liệu không hợp lệ
+
+  # ========== COLUMNS ==========
+  /columns:
+    post:
+      summary: Tạo column mới
+      description: Tạo column mới trong board. Column sẽ tự động được thêm vào columnOrderIds của board.
+      tags: [Columns]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ColumnCreateRequest'
+      responses:
+        '201':
+          description: Tạo column thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ColumnResponse'
+        '401':
+          description: Chưa đăng nhập
+        '422':
+          description: Dữ liệu không hợp lệ
+
+  /columns/{id}:
+    put:
+      summary: Cập nhật column
+      description: Cập nhật title hoặc cardOrderIds (kéo thả cards)
+      tags: [Columns]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Column ID (ObjectId)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ColumnUpdateRequest'
+      responses:
+        '200':
+          description: Cập nhật thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ColumnResponse'
+        '401':
+          description: Chưa đăng nhập
+        '422':
+          description: Dữ liệu không hợp lệ
+
+    delete:
+      summary: Xóa column
+      description: Xóa column và tất cả cards thuộc column đó. Đồng thời xóa columnId khỏi columnOrderIds của board.
+      tags: [Columns]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Column ID (ObjectId)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [boardId]
+              properties:
+                boardId:
+                  type: string
+                  description: Board ID chứa column cần xóa
+      responses:
+        '200':
+          description: Xóa thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deleteResult:
+                    type: string
+                    example: Column and its Cards deleted successfully!
+        '401':
+          description: Chưa đăng nhập
+
+  # ========== CARDS ==========
+  /cards:
+    post:
+      summary: Tạo card mới
+      description: Tạo card mới trong column. Card sẽ tự động được thêm vào cardOrderIds của column.
+      tags: [Cards]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CardCreateRequest'
+      responses:
+        '201':
+          description: Tạo card thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CardResponse'
+        '401':
+          description: Chưa đăng nhập
+        '422':
+          description: Dữ liệu không hợp lệ
+
+  /cards/{id}:
+    put:
+      summary: Cập nhật card
+      description: |
+        Cập nhật thông tin card: title, description, upload cover image, thêm comment.
+        - Upload cover: gửi qua form-data với field name 'cardCover'
+        - Thêm comment: gửi object comments trong body, server sẽ tự thêm userId, userEmail, userAvatar
+      tags: [Cards]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Card ID (ObjectId)
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                cardCover:
+                  type: string
+                  format: binary
+                  description: File ảnh cover card
+                title:
+                  type: string
+                description:
+                  type: string
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CardUpdateRequest'
+      responses:
+        '200':
+          description: Cập nhật thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CardResponse'
+        '401':
+          description: Chưa đăng nhập
+        '422':
+          description: Dữ liệu không hợp lệ

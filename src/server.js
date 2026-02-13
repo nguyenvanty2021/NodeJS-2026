@@ -10,10 +10,17 @@ import cookieParser from 'cookie-parser'
 import socketIo from 'socket.io'
 import http from 'http'
 import { inviteUserToBoardSocket } from '~/sockets/invite-user-to-board-socket'
+import swaggerUi from 'swagger-ui-express'
+import YAML from 'yaml'
+import fs from 'fs'
+import path from 'path'
+
+const file = fs.readFileSync(path.resolve('./swagger.yml'), 'utf8')
+const swaggerDocument = YAML.parse(file)
 
 const START_SERVER = () => {
   const app = express()
-
+  app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument))
   // Fix cái vụ Cache from disk của ExpressJS
   // https://stackoverflow.com/a/53240717/8324172
   app.use((req, res, next) => {
