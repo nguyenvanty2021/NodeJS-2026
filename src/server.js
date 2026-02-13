@@ -7,6 +7,9 @@ import { APIs_V1 } from '~/routes/v1'
 import { errorHandlingMiddleware } from '~/middlewares/error-handling-middleware'
 import { corsOptions } from '~/config/cors'
 import cookieParser from 'cookie-parser'
+import socketIo from 'socket.io'
+import http from 'http'
+import { inviteUserToBoardSocket } from '~/sockets/invite-user-to-board-socket'
 
 const START_SERVER = () => {
   const app = express()
@@ -33,15 +36,40 @@ const START_SERVER = () => {
   // middleware xử lý lỗi tập trung
   app.use(errorHandlingMiddleware)
 
+  //
+  // Tạo một cái server mới bọc thằng app của express để làm real-time với socket.io
+  const server = http.createServer(app)
+
+  /**
+   * Khởi tạo biến io với server và cors
+   * - socketIo(server, { cors }): gắn socket.io vào HTTP server, cho phép real-time 2 chiều giữa client và server
+   * - cors: corsOptions: dùng chung cấu hình CORS với express để tránh bị block bởi trình duyệt
+   */
+  const io = socketIo(server, { cors: corsOptions })
+
+  /**
+   * io.on('connection'): lắng nghe sự kiện có client kết nối tới server qua socket
+   * - Mỗi khi 1 client (browser) kết nối, callback chạy với tham số 'socket' đại diện cho kết nối đó
+   * - Mỗi client có 1 socket riêng biệt, dùng socket này để gửi/nhận event real-time
+   */
+  io.on('connection', (socket) => {
+    console.log('a user connected', socket)
+    inviteUserToBoardSocket(socket)
+  })
+
   if (env.BUILD_MODE === 'production') {
     // Production (Render): listen trên 0.0.0.0 để Render detect được port
-    app.listen(env.APP_PORT, () => {
+    // dùng server.listen thay cho app.listen vì lúc này server đã bao gồm express app và đã config socket.io
+    // nếu không dùng socket thì chỉ cần app.listen
+    server.listen(env.APP_PORT, () => {
       // eslint-disable-next-line no-console
       console.log(`3. Hi ${env.AUTHOR}, I am running at port ${env.APP_PORT}/ in production mode`)
     })
   } else {
+    // nếu không dùng socket thì chỉ cần app.listen
+    // dùng server.listen thay cho app.listen vì lúc này server đã bao gồm express app và đã config socket.io
     // Development: listen trên localhost
-    app.listen(env.APP_PORT, env.APP_HOST, () => {
+    server.listen(env.APP_PORT, env.APP_HOST, () => {
       // eslint-disable-next-line no-console
       console.log(`3. Hi ${env.AUTHOR}, I am running at http://${env.APP_HOST}:${env.APP_PORT}/`)
     })

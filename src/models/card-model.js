@@ -89,11 +89,30 @@ const updateCard = async ({ cardId, updateData }) => {
   } catch (error) { throw new Error(error) }
 }
 
+const unshiftNewComment = async ({ cardId, commentData }) => {
+  try {
+    const result = await GET_DB().collection(CARD_COLLECTION_NAME).findOneAndUpdate(
+      { _id: new ObjectId(cardId) },
+      /**
+       * $push: Thêm phần tử vào mảng 'comments'
+       * - $each: [commentData] — chỉ định dữ liệu cần thêm (bắt buộc khi dùng $position)
+       * - $position: 0 — chèn vào ĐẦU mảng (index 0), giống Array.unshift() trong JavaScript
+       *   => Comment mới nhất luôn nằm đầu tiên, không cần sort lại ở frontend
+       *   Nếu không có $position thì mặc định $push sẽ thêm vào CUỐI mảng (giống Array.push())
+       */
+      { $push: { comments: { $each: [commentData], $position: 0 } } },
+      { returnDocument: 'after' }
+    )
+    return result
+  } catch (error) { throw new Error(error) }
+}
+
 export const cardModel = {
   CARD_COLLECTION_NAME,
   CARD_COLLECTION_SCHEMA,
   addNewCard,
   findOneById,
   deleteManyByColumnId,
-  updateCard
+  updateCard,
+  unshiftNewComment
 }

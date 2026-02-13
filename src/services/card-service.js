@@ -32,7 +32,7 @@ const addNewCard = async (reqBody) => {
 }
 
 
-const updateCard = async ({ cardId, reqBody, cardCoverFile }) => {
+const updateCard = async ({ cardId, reqBody, cardCoverFile, userInfo }) => {
   // eslint-disable-next-line no-useless-catch
   try {
     // Khởi tạo object chứa các field cần update
@@ -45,6 +45,18 @@ const updateCard = async ({ cardId, reqBody, cardCoverFile }) => {
     if (cardCoverFile) {
       const uploadResult = await CloudinaryProvider.streamUpload(cardCoverFile.buffer, 'card-covers')
       updateData.cover = uploadResult.secure_url
+    }
+
+    if (updateData?.comments) {
+      const commentData = {
+        ...updateData.comments,
+        commentedAt: Date.now(),
+        userId: userInfo._id,
+        userEmail: userInfo.email,
+        userAvatar: userInfo.avatar,
+        userName: userInfo.username
+      }
+      updateData = await cardModel.unshiftNewComment({ cardId, commentData })
     }
 
     // Gom tất cả lại và update 1 lần duy nhất vào DB
