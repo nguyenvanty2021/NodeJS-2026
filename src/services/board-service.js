@@ -61,14 +61,14 @@ const updateBoard = async ({ boardId, reqBody }) => {
   } catch (error) { throw error }
 }
 
-const getAllBoard = async ({ userId, page, limit }) => {
+const getAllBoard = async ({ userId, page, limit, queryFilter }) => {
   // eslint-disable-next-line no-useless-catch
   try {
     // Nếu không tồn tại page hoặc itemsPerPage từ phía FE thì BE sẽ cần phải luôn gán giá trị mặc định
     if (!page) page = DEFAULT_PAGE
     if (!limit) limit = DEFAULT_LIMIT
 
-    const results = await boardModel.getAllBoard({ userId, page: parseInt(page, 10), limit: parseInt(limit, 10) })
+    const results = await boardModel.getAllBoard({ userId, page: parseInt(page, 10), limit: parseInt(limit, 10), queryFilter })
 
     return results
   } catch (error) { throw error }

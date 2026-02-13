@@ -187,7 +187,7 @@ const pullColumnOrderIds = async ({ boardId, columnId }) => {
  * Query tất cả boards thuộc về user hiện tại (là owner hoặc member) với hỗ trợ phân trang
  * Flow: Lọc theo điều kiện → Sắp xếp → Phân trang → Đếm tổng → Trả kết quả
  */
-const getAllBoard = async ({ userId, page, limit }) => {
+const getAllBoard = async ({ userId, page, limit, queryFilter }) => {
   try {
     // Mảng queryConditions chứa các điều kiện lọc, sẽ được kết hợp bằng $and bên dưới
     const queryConditions = [
@@ -209,6 +209,35 @@ const getAllBoard = async ({ userId, page, limit }) => {
         { memberIds: { $all: [new ObjectId(userId)] } }
       ] }
     ]
+
+    // đây là tính năng search theo query string data hoặc search theo key
+    // Xử lý query filter cho từng trường hợp search board, ví dụ search theo title
+    if (queryFilter) {
+      console.log(queryFilter)
+      // example queryFilter = {
+      //   title: 'title ne'
+      //   description: 'description ne'
+      // }
+      console.log(Object.keys(queryFilter))
+
+      Object.keys(queryFilter).forEach(key => {
+        // Có phân biệt chữ hoa chữ thường
+        //queryConditions.push({ [key]: { $regex: queryFilter[key] } })
+
+        // Không phân biệt chữ hoa chữ thường
+        queryConditions.push({ [key]: { $regex: new RegExp(queryFilter[key], 'i') } })
+      })
+
+    }
+
+    // Example queryConditions sau khi xử lý queryFilter:
+    // queryConditions: [
+    //   { _destroy: false },
+    //   { '$or': [ [Object], [Object] ] },
+    //   { title: { '$regex': 'title ne' } },
+    //   { description: { '$regex': 'description ne' } }
+    // ]
+    console.log('queryConditions:', queryConditions)
 
     const query = await GET_DB().collection(BOARD_COLLECTION_NAME).aggregate([
       // $match + $and: lọc boards thỏa mãn TẤT CẢ các điều kiện trong queryConditions
