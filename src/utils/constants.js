@@ -16,3 +16,7 @@ export const WEBSITE_DOMAIN = (env.BUILD_MODE === 'production') ? env.WEBSITE_DO
 
 export const DEFAULT_PAGE = 1
 export const DEFAULT_ITEMS_PER_PAGE = 10
+
+export const MAILER_SEND_TEMPLATE_IDS = {
+  REGISTER_ACCOUNT: 'z86org8z9rkgew13'
+}

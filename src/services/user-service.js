@@ -4,12 +4,15 @@ import { StatusCodes } from 'http-status-codes'
 import bcryptjs from 'bcryptjs'
 import { v4 as uuidv4 } from 'uuid'
 import { pickData } from '~/utils/formatters'
-import { WEBSITE_DOMAIN } from '~/utils/constants'
+import { WEBSITE_DOMAIN, MAILER_SEND_TEMPLATE_IDS } from '~/utils/constants'
 import { BrevoProvider } from '~/providers/brevo-provider'
 import { TwilioSmsProvider } from '~/providers/twilio-sms-providers'
+import { ResendProvider } from '~/providers/resend-providers'
 import { env } from '~/config/environment'
 import { JwtProvider } from '~/providers/jwt-providers'
 import { CloudinaryProvider } from '~/providers/cloudinary-providers'
+import { MailerSendProvider } from '~/providers/mailer-send-providers'
+import { MailerSendTemplateProvider } from '~/providers/mailer-send-template-providers'
 
 const register = async (reqBody) => {
   // eslint-disable-next-line no-useless-catch
@@ -44,9 +47,50 @@ const register = async (reqBody) => {
       <h3>Sincerely,<br/> - Company Name - </h3>
     `
 
+
+    // Gửi mail cho user sau khi đăng ký tài khoản
+    // Bước gửi mail này sẽ là việc gửi hành động đến một dịch vụ Email as a Service.
+    const to = getNewUser.email
+    const toName = 'username123'
+    const subject = 'Trello MERN Stack Advanced: Please verify your email before using our services!'
+    const html = `
+      <h3>Here is your verification link:</h3>
+      <h3>${verificationLink}</h3>
+      <h3>Sincerely,<br/> - Company Name - </h3>
+    `
+
+    const personalizationData = [
+      {
+        email: to,
+        data: {
+          name: 'User ABC',
+          youtube_channel_name: 'Channel Fullstack',
+          account_name: 'Company ABC'
+        }
+      }
+    ]
+    const mailerSendEmailWithTemplateDataResponse = await MailerSendTemplateProvider.sendEmail({
+      to,
+      toName,
+      subject,
+      templateId: MAILER_SEND_TEMPLATE_IDS.REGISTER_ACCOUNT, // templateId của email, khi có nhiều thì nên tách ra một file riêng phía BE để lưu lại và gọi ra sử dụng nhé.
+      personalizationData
+    })
+    // eslint-disable-next-line no-console
+    console.log('mailerSendEmailWithTemplateDataResponse: ', mailerSendEmailWithTemplateDataResponse)
+
+    // Gửi mail với MailerSend
+    const sentMailerSendEmailResponse = await MailerSendProvider.sendEmail({ to, subject, html, toName })
+    // eslint-disable-next-line no-console
+    console.log('MailerSend: Sent email done: ', sentMailerSendEmailResponse)
+
+    // Gửi mail với Resend
+    const sentResendEmailResponse = await ResendProvider.sendEmail({ to, subject, html })
+    // eslint-disable-next-line no-console
+    console.log('Resend: Sent email done: ', sentResendEmailResponse)
+
     // gọi hàm gửi email
     await BrevoProvider.sendEmail({ recipientEmail: getNewUser.email, customSubject, customHtmlContent: htmlContent })
-
 
     // Gửi sms cho user sau khi đăng ký tài khoản, có thể là sms xác nhận, sms welcome...vv
     // Bước gửi sms này sẽ là việc gửi hành động đến một dịch vụ bên thứ 3.
