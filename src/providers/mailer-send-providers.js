@@ -1,5 +1,6 @@
-import { MailerSend, EmailParams, Sender, Recipient } from 'mailersend'
+import { MailerSend, EmailParams, Sender, Recipient, Attachment } from 'mailersend'
 import { env } from '~/config/environment'
+import fs from 'fs'
 
 // LƯU Ý QUAN TRỌNG VỀ BẢO MẬT: Trong thực tế những cái API Key này sẽ được lưu trữ trong file .env (TUYỆT
 // ĐỐI KHÔNG PUSH KEY LÊN GITHUB)
@@ -16,7 +17,7 @@ const mailerSendInstance = new MailerSend({ apiKey: MAILER_SEND_API_KEY })
 const sentFrom = new Sender(ADMIN_SENDER_EMAIL, ADMIN_SENDER_NAME)
 
 // Function để gửi email
-const sendEmail = async ({ to, subject, html, toName }) => {
+const sendEmail = async ({ to, subject, html, toName, attachments }) => {
   try {
     // Setup email và tên của người nhận, (hoặc nhiều người nhận, dữ liệu trong mảng)
     const recipients = [
@@ -41,12 +42,23 @@ const sendEmail = async ({ to, subject, html, toName }) => {
     //   new Recipient('your_bcc_03@trungquandev.com', 'Your Client BCC 03')
     // ]
 
+    // Attachments: Image đính kèm
+    const buildAttachments = attachments.map(att => {
+      return new Attachment(
+        fs.readFileSync(att.filePath, { encoding: 'base64' }),
+        att.filename,
+        att.attachmentType,
+        att.fileId // content_id để map với cid trong HTML, ví dụ: <img src="cid:idImgHero" />
+      )
+    })
+
     const emailParams = new EmailParams()
       .setFrom(sentFrom)
       .setTo(recipients)
       .setReplyTo(sentFrom)
       .setSubject(subject)
       .setHtml(html)
+      .setAttachments(buildAttachments)
     //   .setCc(cc)
     //   .setBcc(bcc)
       // .setText() // email dạng text cực kỳ đơn giản, ít dùng

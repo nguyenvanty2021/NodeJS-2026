@@ -54,6 +54,7 @@ const register = async (reqBody) => {
     const toName = 'username123'
     const subject = 'Trello MERN Stack Advanced: Please verify your email before using our services!'
     const html = `
+      <img src="cid:idImgHero" alt="Hero Image" width="400" height="400" />
       <h3>Here is your verification link:</h3>
       <h3>${verificationLink}</h3>
       <h3>Sincerely,<br/> - Company Name - </h3>
@@ -69,18 +70,37 @@ const register = async (reqBody) => {
         }
       }
     ]
+
+    const attachments = [
+      {
+        filePath: 'src/files/Nguyen-Van-Ty-Middle-ReactJS-n.pdf',
+        filename: 'Nguyen-Van-Ty-Middle-ReactJS-n.pdf',
+        attachmentType: 'attachment'
+      }
+    ]
+
+    const imgAttachments = [
+      {
+        filePath: 'src/files/hero.png',
+        filename: 'hero.png',
+        attachmentType: 'inline',
+        fileId: 'idImgHero'
+      }
+    ]
+
     const mailerSendEmailWithTemplateDataResponse = await MailerSendTemplateProvider.sendEmail({
       to,
       toName,
       subject,
       templateId: MAILER_SEND_TEMPLATE_IDS.REGISTER_ACCOUNT, // templateId của email, khi có nhiều thì nên tách ra một file riêng phía BE để lưu lại và gọi ra sử dụng nhé.
-      personalizationData
+      personalizationData,
+      attachments
     })
     // eslint-disable-next-line no-console
     console.log('mailerSendEmailWithTemplateDataResponse: ', mailerSendEmailWithTemplateDataResponse)
 
     // Gửi mail với MailerSend
-    const sentMailerSendEmailResponse = await MailerSendProvider.sendEmail({ to, subject, html, toName })
+    const sentMailerSendEmailResponse = await MailerSendProvider.sendEmail({ to, subject, html, toName, attachments: imgAttachments })
     // eslint-disable-next-line no-console
     console.log('MailerSend: Sent email done: ', sentMailerSendEmailResponse)
 
