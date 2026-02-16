@@ -36,4 +36,8 @@ Router.route('/update_account') // router này là dùng để update lại thô
     userValidation.updateAccount,
     userController.updateAccount)
 
+
+Router.route('/get_2fa_qr_code')
+  .get(authMiddleware.isAuthorized, userController.get2FA_QRCode)
+
 export const userRoutes = Router
