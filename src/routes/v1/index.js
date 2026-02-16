@@ -4,6 +4,7 @@ import { boardRoutes } from '~/routes/v1/board-routes'
 import { columnRoutes } from '~/routes/v1/column-routes'
 import { cardRoutes } from '~/routes/v1/card-routes'
 import { userRoutes } from '~/routes/v1/user-routes'
+import { twoFactorRoutes } from '~/routes/v1/two-factor-routes'
 
 const Router = express.Router()
 
@@ -18,5 +19,7 @@ Router.use('/columns', columnRoutes)
 Router.use('/cards', cardRoutes)
 
 Router.use('/users', userRoutes)
+
+Router.use('/2fa', twoFactorRoutes)
 
 export const APIs_V1 = Router

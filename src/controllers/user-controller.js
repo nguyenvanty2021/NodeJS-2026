@@ -2,9 +2,6 @@ import { StatusCodes } from 'http-status-codes'
 import { userService } from '~/services/user-service'
 import ms from 'ms'
 import ApiError from '~/utils/api-error'
-import { generateSecret, generateURI } from 'otplib'
-import QRCode from 'qrcode'
-import { twoFactorSecretKeyModel } from '~/models/two-factor-secret-key-model'
 
 const register = async (req, res, next) => {
   try {
@@ -91,44 +88,11 @@ const updateAccount = async (req, res, next) => {
   } catch (error) { next(error) }
 }
 
-
-const get2FA_QRCode = async (req, res) => {
-  try {
-    // Biến lưu trữ 2fa secret key của user
-    let twoFactorSecretKeyValue = null
-    // Lấy 2fa secret key của user từ bảng 2fa_secret_keys
-    const twoFactorSecretKey = await twoFactorSecretKeyModel.findOne({ user_id: req.jwtDecoded._id })
-
-    if (!twoFactorSecretKey) {
-      // Nếu chưa có secret key riêng của user thì tạo mới secret key cho user
-      const newTwoFactorSecretKey = await twoFactorSecretKeyModel.insert({
-        user_id: req.jwtDecoded._id,
-        value: generateSecret() // generateSecret() là một hàm từ otplib để tạo một random secret key mới, đúng chuẩn.
-      })
-      twoFactorSecretKeyValue = newTwoFactorSecretKey.value
-    } else {
-      // Ngược lại nếu user đã có rồi thì lấy ra sử dụng luôn.
-      twoFactorSecretKeyValue = twoFactorSecretKey.value
-    }
-
-    // Tạo otpAuth URL để generate QR code
-    const otpAuth = generateURI({ issuer: 'TrelloApp', label: req.jwtDecoded._id, secret: twoFactorSecretKeyValue })
-
-    // Tạo QR code dạng data URL từ otpAuth
-    const qrCodeDataURL = await QRCode.toDataURL(otpAuth)
-
-    res.status(StatusCodes.OK).json({ qrCode: qrCodeDataURL })
-  } catch (error) {
-    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json(error.message)
-  }
-}
-
 export const userController = {
   register,
   verifyAccount,
   login,
   logout,
   refreshToken,
-  updateAccount,
-  get2FA_QRCode
+  updateAccount
 }
