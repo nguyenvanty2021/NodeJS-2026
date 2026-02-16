@@ -1,6 +1,9 @@
 import { twoFactorSecretKeyModel } from '~/models/two-factor-secret-key-model'
-import { generateSecret, generateURI } from 'otplib'
+import { userModel } from '~/models/user-model'
+import { generateSecret, generateURI, verify } from 'otplib'
 import QRCode from 'qrcode'
+import ApiError from '~/utils/api-error'
+import { StatusCodes } from 'http-status-codes'
 
 const get2FA_QRCode = async (userId) => {
   // eslint-disable-next-line no-useless-catch
@@ -32,10 +35,34 @@ const get2FA_QRCode = async (userId) => {
   } catch (error) { throw error }
 }
 
-const setup2FA = async (userId, reqBody) => {
+const setup2FA = async (userId, otpToken) => {
   // eslint-disable-next-line no-useless-catch
   try {
-    // TODO: Implement setup2FA logic
+    // Tìm user theo userId từ JWT token
+    const user = await userModel.findOneById(userId)
+    if (!user) {
+      throw new ApiError(StatusCodes.NOT_FOUND, 'User not found!')
+    }
+
+    // Lấy secret key của user từ bảng 2fa_secret_keys
+    const twoFactorSecretKey = await twoFactorSecretKeyModel.findOne({ user_id: user._id.toString() })
+    if (!twoFactorSecretKey) {
+      throw new ApiError(StatusCodes.NOT_FOUND, 'Two-Factor secret key not found!')
+    }
+
+    // Xác thực OTP Token từ client gửi lên với secret key đã lưu trong DB
+    const isValid = await verify({ token: otpToken, secret: twoFactorSecretKey.value })
+    if (!isValid) {
+      throw new ApiError(StatusCodes.NOT_ACCEPTABLE, 'Invalid OTP Token!')
+    }
+
+    // Bước 4: Nếu OTP Token hợp lệ thì nghĩa là đã xác thực 2FA thành công, tiếp theo sẽ cập nhật lại thông tin require_2fa của user trong Database
+    const updatedUser = await userModel.update(
+      user._id,
+      { require_2fa: true }
+    )
+
+    return updatedUser
   } catch (error) { throw error }
 }
 
