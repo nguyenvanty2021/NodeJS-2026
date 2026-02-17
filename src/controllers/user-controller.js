@@ -88,11 +88,54 @@ const updateAccount = async (req, res, next) => {
   } catch (error) { next(error) }
 }
 
+
+const hookLogin = async (req, res) => {
+  try {
+    // console.log('req.auth: ', req.auth)
+    // req.auth.header // The decoded JWT header.
+    // req.auth.payload // The decoded JWT payload.
+    // req.auth.token // The raw JWT token.
+
+    const newUser = req.body
+    console.log('newUser: ', newUser)
+
+    const existingUser = await userService.findOneByEmail(newUser.email)
+    console.log('existingUser: ', existingUser)
+
+    // Chưa tồn tại user thì tiếp tục xuống dưới insert vào DB, ngược lại thì tùy spec dự án để xử lý
+    if (existingUser) {
+      res.status(StatusCodes.OK).json({ message: 'User already exists. Continue login...' })
+      return
+    }
+
+    // NeDB sẽ lưu dữ liệu trong JSON mà không cần phân cách bằng dấu phẩy, mỗi bản ghi được lưu trên một dòng riêng biệt
+    // Mục đích để dễ dàng đọc và ghi dữ liệu mà không cần phải xử lý toàn bộ tệp JSON mỗi lần truy vấn
+    // NeDB tự động thêm _id cho mỗi bản ghi nếu chúng ta không chỉ định
+    const insertedUser = await userService.createNew(newUser)
+    console.log('insertedUser: ', insertedUser)
+
+    res.status(StatusCodes.CREATED).json(insertedUser)
+  } catch (error) {
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json(error)
+  }
+}
+
+const getAll = async (req, res) => {
+  // eslint-disable-next-line no-empty
+  try {
+
+  } catch (error) {
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json(error)
+  }
+}
+
 export const userController = {
   register,
   verifyAccount,
   login,
   logout,
   refreshToken,
-  updateAccount
+  updateAccount,
+  hookLogin,
+  getAll
 }

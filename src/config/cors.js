@@ -14,7 +14,8 @@ export const corsOptions = {
     }
 
     // Kiểm tra xem origin có phải là domain được chấp nhận hay không
-    if (WHITELIST_DOMAINS.includes(origin)) {
+    // Cho phép origin undefined trên production cho các server-to-server requests (ví dụ Auth0 Actions gọi API)
+    if (WHITELIST_DOMAINS.includes(origin) || !origin) {
       return callback(null, true)
     }
 

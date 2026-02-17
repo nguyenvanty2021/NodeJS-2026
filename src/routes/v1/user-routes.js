@@ -36,4 +36,12 @@ Router.route('/update_account') // router này là dùng để update lại thô
     userValidation.updateAccount,
     userController.updateAccount)
 
+// Private: API nhận thông tin user từ Auth0 và tạo mới bản ghi vào Database của dự án (cần xác thực accessToken)
+Router.route('/private/hook/login')
+  .post(userController.hookLogin)
+
+// Private: API get toàn bộ user (cần xác thực accessToken)
+Router.route('/private/get_all')
+  .get(userController.getAll)
+
 export const userRoutes = Router
