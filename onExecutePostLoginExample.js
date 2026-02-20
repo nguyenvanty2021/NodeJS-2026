@@ -6,8 +6,8 @@
 const axios = require('axios')
 
 const RENDER_API_ENDPOINT = 'https://nodejs-2026.onrender.com'
-const AUTH0_CLIENT_ID = 'eoZrUZr6PhCp1XHNgJAjl0nn7YGcXZIp'
-const AUTH0_CLIENT_SECRET = 'EH3R00HqOvjcXk1BwmcNA0LqyKItEualUgSWo53plh7FpZWj0f4xYOJw2x3bKw0c'
+const AUTH0_CLIENT_ID = 'VzUig3czDHmRLcitYu1J4nkJ1iMZgkWr'
+const AUTH0_CLIENT_SECRET = '8nrrlqSxs5gP2tGGXXvqF3kR9X5uISVNvr9S7Ipd0joXC4i93B1qNfPrQVvVOZt8'
 const AUTH0_DOMAIN = 'dev-nhknxv2jul6jheta.us.auth0.com'
 
 exports.onExecutePostLogin = async (event, api) => {
@@ -31,7 +31,7 @@ exports.onExecutePostLogin = async (event, api) => {
     // THông tin user sau khi login qua Auth0 sẽ được lấy từ event.user
     console.log('event.user: ', event.user)
     // Gọi tới API trên server backend của chúng ta để lưu user vào Database
-    await axios.post(`${RENDER_API_ENDPOINT}/api-v1/users/private/hook/login`, event.user, {
+    await axios.post(`${RENDER_API_ENDPOINT}/v1/users/private/hook/login`, event.user, {
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${accessToken}`

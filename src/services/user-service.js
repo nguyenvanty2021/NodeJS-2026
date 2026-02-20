@@ -248,7 +248,41 @@ const updateAccount = async ({ userId, body: reqBody, userAvatarFile }) => {
     // Gom tất cả lại và update 1 lần duy nhất vào DB
     const updatedUser = await userModel.update(existUser._id, updateData)
 
-    return pickData({ objectPick: updatedUser, getListFields: ['_id', 'email', 'username', 'displayName', 'avatar', 'role', 'isActive', 'createdAt', 'updatedAt'] }) } catch (error) { throw error }
+    return pickData({ objectPick: updatedUser, getListFields: ['_id', 'email', 'username', 'displayName', 'avatar', 'role', 'isActive', 'createdAt', 'updatedAt'] })
+  } catch (error) { throw error }
+}
+
+/**
+ * Các hàm dành cho Auth0 Hook Login
+ */
+const findOneByEmail = async (emailValue) => {
+  // eslint-disable-next-line no-useless-catch
+  try {
+    const user = await userModel.findOneByEmail(emailValue)
+    return user
+  } catch (error) { throw error }
+}
+
+const createNew = async (auth0UserData) => {
+  // eslint-disable-next-line no-useless-catch
+  try {
+    // Map dữ liệu từ Auth0 event.user sang schema của userModel
+    // Auth0 event.user có các field: email, nickname, name, picture, user_id, ...
+    const nameFromEmail = auth0UserData.email.split('@')[0]
+    const newUser = {
+      email: auth0UserData.email,
+      password: bcryptjs.hashSync(uuidv4(), 8), // Tạo password ngẫu nhiên vì Auth0 quản lý authentication
+      username: auth0UserData.nickname || nameFromEmail,
+      displayName: auth0UserData.name || nameFromEmail,
+      avatar: auth0UserData.picture || null,
+      isActive: true // User từ Auth0 đã được xác thực rồi
+    }
+
+    const createdUser = await userModel.createNew(newUser)
+    const getNewUser = await userModel.findOneById(createdUser.insertedId)
+
+    return pickData({ objectPick: getNewUser, getListFields: ['_id', 'email', 'username', 'displayName', 'avatar', 'role', 'isActive', 'createdAt', 'updatedAt'] })
+  } catch (error) { throw error }
 }
 
 export const userService = {
@@ -256,5 +290,7 @@ export const userService = {
   verifyAccount,
   login,
   refreshToken,
-  updateAccount
+  updateAccount,
+  findOneByEmail,
+  createNew
 }
