@@ -285,6 +285,14 @@ const createNew = async (auth0UserData) => {
   } catch (error) { throw error }
 }
 
+const getAll = async () => {
+  // eslint-disable-next-line no-useless-catch
+  try {
+    const users = await userModel.getAll()
+    return users
+  } catch (error) { throw error }
+}
+
 export const userService = {
   register,
   verifyAccount,
@@ -292,5 +300,6 @@ export const userService = {
   refreshToken,
   updateAccount,
   findOneByEmail,
-  createNew
+  createNew,
+  getAll
 }

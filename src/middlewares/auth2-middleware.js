@@ -10,6 +10,6 @@ const auth0JwtCheck = auth({
   tokenSigningAlg: 'RS256'
 })
 
-export const authMiddleware = {
+export const auth2Middleware = {
   auth0JwtCheck
 }

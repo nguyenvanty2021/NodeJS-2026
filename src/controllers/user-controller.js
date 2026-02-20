@@ -116,13 +116,11 @@ const hookLogin = async (req, res, next) => {
   } catch (error) { next(error) }
 }
 
-const getAll = async (req, res) => {
-  // eslint-disable-next-line no-empty
+const getAll = async (req, res, next) => {
   try {
-
-  } catch (error) {
-    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json(error)
-  }
+    const users = await userService.getAll()
+    res.status(StatusCodes.OK).json(users)
+  } catch (error) { next(error) }
 }
 
 export const userController = {

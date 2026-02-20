@@ -2,6 +2,7 @@ import express from 'express'
 import { userValidation } from '~/validations/user-validation'
 import { userController } from '~/controllers/user-controller'
 import { authMiddleware } from '~/middlewares/auth-middleware'
+import { auth2Middleware } from '~/middlewares/auth2-middleware'
 import { multerUploadMiddleware } from '~/middlewares/multer-upload-middleware'
 
 const Router = express.Router()
@@ -38,10 +39,10 @@ Router.route('/update_account') // router này là dùng để update lại thô
 
 // Private: API nhận thông tin user từ Auth0 và tạo mới bản ghi vào Database của dự án (cần xác thực accessToken)
 Router.route('/private/hook/login')
-  .post(authMiddleware.auth0JwtCheck, userController.hookLogin)
+  .post(auth2Middleware.auth0JwtCheck, userController.hookLogin)
 
 // Private: API get toàn bộ user (cần xác thực accessToken)
 Router.route('/private/get_all')
-  .get(authMiddleware.isAuthorized, userController.getAll)
+  .get(auth2Middleware.auth0JwtCheck, userController.getAll)
 
 export const userRoutes = Router

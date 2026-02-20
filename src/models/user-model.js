@@ -58,6 +58,19 @@ const findOneByEmail = async (emailValue) => {
   } catch (error) { throw new Error(error) }
 }
 
+const getAll = async () => {
+  try {
+    // projection dùng để loại bỏ (exclude) những field nhạy cảm hoặc không cần thiết khỏi kết quả trả về
+    // Giá trị 0 nghĩa là KHÔNG lấy field đó, giá trị 1 nghĩa là CHỈ lấy field đó
+    // Ở đây loại bỏ: password (bảo mật), verifyToken (không cần thiết), _destroy (soft delete flag)
+    const result = await GET_DB().collection(USER_COLLECTION_NAME).find(
+      {},
+      { projection: { password: 0, verifyToken: 0, _destroy: 0 } }
+    ).toArray()
+    return result
+  } catch (error) { throw new Error(error) }
+}
+
 const update = async (userId, updateData) => {
   try {
     // Lọc những field mà chúng ta không cho phép cập nhật linh tinh
@@ -83,5 +96,6 @@ export const userModel = {
   createNew,
   findOneById,
   findOneByEmail,
+  getAll,
   update
 }
