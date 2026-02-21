@@ -16,12 +16,16 @@ servers:
 tags:
   - name: Users
     description: Đăng ký, đăng nhập, xác thực và quản lý tài khoản
+  - name: Users (Private - Auth0)
+    description: API private dành cho Auth0 Hook và quản trị, xác thực bằng Auth0 JWT (RS256)
   - name: Boards
     description: Quản lý boards (tạo, sửa, xóa, lấy danh sách)
   - name: Columns
     description: Quản lý columns trong board
   - name: Cards
     description: Quản lý cards trong column
+  - name: Two Factor Authentication
+    description: Quản lý xác thực 2 bước (2FA) bằng OTP
 
 components:
   securitySchemes:
@@ -29,7 +33,12 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
-      description: Access Token lấy từ API login
+      description: Access Token lấy từ API login (cookie-based)
+    Auth0BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Access Token lấy từ Auth0 (RS256, dùng cho các API private)
 
   schemas:
     # ========== USER ==========
@@ -812,3 +821,141 @@ paths:
           description: Chưa đăng nhập
         '422':
           description: Dữ liệu không hợp lệ
+
+  # ========== USERS PRIVATE (Auth0) ==========
+  /users/private/hook/login:
+    post:
+      summary: Hook Login từ Auth0 (Private)
+      description: |
+        API nhận thông tin user từ Auth0 Post Login Action.
+        Nếu user chưa tồn tại trong DB thì tạo mới, nếu đã tồn tại thì bỏ qua.
+        Xác thực bằng Auth0 JWT (RS256) thông qua middleware auth0JwtCheck.
+      tags: [Users (Private - Auth0)]
+      security:
+        - Auth0BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+                  description: Email của user từ Auth0
+                nickname:
+                  type: string
+                  description: Nickname từ Auth0 (sẽ map thành username)
+                name:
+                  type: string
+                  description: Tên hiển thị từ Auth0 (sẽ map thành displayName)
+                picture:
+                  type: string
+                  description: URL ảnh đại diện từ Auth0 (sẽ map thành avatar)
+                user_id:
+                  type: string
+                  description: User ID từ Auth0
+              required: [email]
+      responses:
+        '200':
+          description: User đã tồn tại trong DB
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: User already exists. Continue login...
+        '201':
+          description: Tạo user mới thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '401':
+          description: Auth0 JWT không hợp lệ
+
+  /users/private/get_all:
+    get:
+      summary: Lấy danh sách tất cả users (Private)
+      description: |
+        Lấy toàn bộ users trong hệ thống.
+        Kết quả loại bỏ các field nhạy cảm: password, verifyToken, _destroy.
+        Xác thực bằng Auth0 JWT (RS256).
+      tags: [Users (Private - Auth0)]
+      security:
+        - Auth0BearerAuth: []
+      responses:
+        '200':
+          description: Danh sách tất cả users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UserResponse'
+        '401':
+          description: Auth0 JWT không hợp lệ
+
+  # ========== TWO FACTOR AUTHENTICATION ==========
+  /2fa/get_2fa_qr_code:
+    get:
+      summary: Lấy QR Code để thiết lập 2FA
+      description: |
+        Tạo và trả về QR Code (dạng base64 image) để user quét bằng app authenticator (Google Authenticator, Authy, v.v.).
+        Yêu cầu đã đăng nhập (accessToken cookie).
+      tags: [Two Factor Authentication]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: QR Code được tạo thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  qrCodeUrl:
+                    type: string
+                    description: URL hoặc base64 data của QR Code
+        '401':
+          description: Chưa đăng nhập
+
+  /2fa/setup_2fa:
+    post:
+      summary: Xác nhận thiết lập 2FA
+      description: |
+        Xác nhận thiết lập 2FA bằng cách gửi OTP token từ app authenticator.
+        Nếu OTP hợp lệ thì bật 2FA cho tài khoản (require_2fa = true).
+      tags: [Two Factor Authentication]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [otpToken]
+              properties:
+                otpToken:
+                  type: string
+                  description: Mã OTP 6 số từ app authenticator
+                  example: '123456'
+      responses:
+        '200':
+          description: Thiết lập 2FA thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: 2FA setup successfully!
+        '401':
+          description: Chưa đăng nhập
+        '406':
+          description: OTP không hợp lệ
