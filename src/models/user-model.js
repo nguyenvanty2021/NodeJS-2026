@@ -2,12 +2,7 @@ import Joi from 'joi'
 import { ObjectId } from 'mongodb'
 import { GET_DB } from '~/config/mongodb'
 import { EMAIL_RULE, EMAIL_RULE_MESSAGE } from '~/utils/validators'
-
-// Define tạm 2 roles cho user, tùy việc mở rộng dự án như thế nào mà mọi người có thể thêm role tùy ý sao cho phù hợp sau.
-const USER_ROLES = {
-  CLIENT: 'client',
-  ADMIN: 'admin'
-}
+import { RBAC_LEVEL_1 } from '../utils/constants'
 
 // Define Collection (name & schema)
 const USER_COLLECTION_NAME = 'users'
@@ -18,7 +13,7 @@ const USER_COLLECTION_SCHEMA = Joi.object({
   username: Joi.string().required().trim().strict(),
   displayName: Joi.string().required().trim().strict(),
   avatar: Joi.string().default(null),
-  role: Joi.string().valid(USER_ROLES.CLIENT, USER_ROLES.ADMIN).default(USER_ROLES.CLIENT),
+  role: Joi.string().valid(RBAC_LEVEL_1.CLIENT, RBAC_LEVEL_1.ADMIN, RBAC_LEVEL_1.MODERATOR).default(RBAC_LEVEL_1.CLIENT),
 
   isActive: Joi.boolean().default(false),
   verifyToken: Joi.string(),
@@ -92,7 +87,6 @@ const update = async (userId, updateData) => {
 export const userModel = {
   USER_COLLECTION_NAME,
   USER_COLLECTION_SCHEMA,
-  USER_ROLES,
   createNew,
   findOneById,
   findOneByEmail,

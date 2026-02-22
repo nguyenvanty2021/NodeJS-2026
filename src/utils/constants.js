@@ -20,3 +20,8 @@ export const DEFAULT_ITEMS_PER_PAGE = 10
 export const MAILER_SEND_TEMPLATE_IDS = {
   REGISTER_ACCOUNT: 'z86org8z9rkgew13'
 }
+export const RBAC_LEVEL_1 = {
+  ADMIN: 'admin',
+  MODERATOR: 'moderator',
+  CLIENT: 'client'
+}
