@@ -1,9 +1,10 @@
-import { MOCK_ROLES_LEVEL_3 } from '~/models/mockDatabase-Level-3'
+import { RBAC_LEVEL_2 } from './constants'
+
 
 // Lấy tất cả quyền (permissions) của một role của user, bao gồm quyền kế thừa
 export const getPermissionsFromRole = async (roleName) => {
   // Thực tế bước này sẽ await vào DB bảng roles để lấy role từ Database nên cứ để func là async
-  const role = MOCK_ROLES_LEVEL_3.find(i => i.name === roleName)
+  const role = RBAC_LEVEL_2.find(i => i.name === roleName)
   // Nếu role không tồn tại thì trả về mảng rỗng, nghĩa là user không có quyền gì cả
   if (!role) return []
 

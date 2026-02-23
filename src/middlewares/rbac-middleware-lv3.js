@@ -15,7 +15,10 @@ const isValidPermission = (requiredPermissions) => async (req, res, next) => {
     // Lưu ý tùy vào từng loại dự án, nếu sẵn sàng đánh đổi về hiệu năng thì có những dự án sẽ truy cập
     // vào Database ở bước này để lấy full thông tin user (bao gồm cả role) từ DB ra và sử dụng.
     // role ở level 3 là 1 mảng không còn là string nữa
-    const userRole = req.jwtDecoded.role
+    // level 1 và level 2 dùng dòng: const userRole = req.jwtDecoded.role
+    // const userRole = req.jwtDecoded.role
+    // level 3 dùng dòng: const userRole = ['client']
+    const userRole = ['client']
 
     // Bước 03: Kiểm tra role, đơn giản nếu user không tồn tại role hoặc role của user không thuộc scope
     // role hợp lệ của api thì sẽ không truy cập được.
@@ -49,7 +52,7 @@ const isValidPermission = (requiredPermissions) => async (req, res, next) => {
     const hasPermission = requiredPermissions?.every(i => userPermissions.has(i))
     if (!hasPermission) {
       res.status(StatusCodes.FORBIDDEN).json({
-        message: 'Forbidden: Bạn không đủ quyền truy cập tới API này!'
+        message: 'You do not have permission to access this API!'
       })
       return
     }
