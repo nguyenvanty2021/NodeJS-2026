@@ -12,6 +12,7 @@ const resolvers = {
     // Tên resolver phải khớp với tên field trong schema: getBookById(id: ID!)
     getBookById: async (parent, args) => {
       const book = await bookModel.findOneById(args.id)
+      if (!book) return null
       return { ...book, id: book._id.toString() }
     },
     // Lấy tất cả authors từ MongoDB collection 'authors'
@@ -23,6 +24,19 @@ const resolvers = {
     // Tên resolver phải khớp với tên field trong schema: getAuthorById(id: ID!)
     getAuthorById: async (parent, args) => {
       const author = await authorModel.findOneById(args.id)
+      if (!author) return null
+      return { ...author, id: author._id.toString() }
+    }
+  },
+
+  // Resolver cho nested field: Book.author
+  // Khi query book có chứa field author, GraphQL sẽ gọi resolver này
+  // parent ở đây chính là object Book đã được resolve ở trên (chứa authorId)
+  Book: {
+    author: async (parent) => {
+      if (!parent.authorId) return null
+      const author = await authorModel.findOneById(parent.authorId.toString())
+      if (!author) return null
       return { ...author, id: author._id.toString() }
     }
   }
