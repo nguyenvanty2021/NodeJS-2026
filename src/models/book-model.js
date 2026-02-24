@@ -67,6 +67,15 @@ const updateBookById = async ({ id, updateData }) => {
   } catch (error) { throw new Error(error) }
 }
 
+const deleteBookById = async (id) => {
+  try {
+    const result = await GET_DB().collection(BOOK_COLLECTION_NAME).findOneAndDelete({
+      _id: new ObjectId(id)
+    })
+    return result
+  } catch (error) { throw new Error(error) }
+}
+
 export const bookModel = {
   BOOK_COLLECTION_NAME,
   BOOK_COLLECTION_SCHEMA,
@@ -74,5 +83,6 @@ export const bookModel = {
   getAllBooks,
   findOneById,
   findByAuthorId,
-  updateBookById
+  updateBookById,
+  deleteBookById
 }

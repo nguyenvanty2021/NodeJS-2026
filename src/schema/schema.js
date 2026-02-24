@@ -37,6 +37,9 @@ const typeDefs = gql`
     # Update - các field không có ! nghĩa là optional, chỉ cần truyền field muốn cập nhật
     updateBookById(id: ID!, name: String, genre: String, authorId: ID): Book
     updateAuthorById(id: ID!, name: String, age: Int): Author
+    # Delete
+    deleteBookById(id: ID!): Book
+    deleteAuthorById(id: ID!): Author
   }
 `
 

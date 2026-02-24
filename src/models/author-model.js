@@ -57,11 +57,21 @@ const updateAuthor = async (id, updateData) => {
   } catch (error) { throw new Error(error) }
 }
 
+const deleteAuthorById = async (id) => {
+  try {
+    const result = await GET_DB().collection(AUTHOR_COLLECTION_NAME).findOneAndDelete({
+      _id: new ObjectId(id)
+    })
+    return result
+  } catch (error) { throw new Error(error) }
+}
+
 export const authorModel = {
   AUTHOR_COLLECTION_NAME,
   AUTHOR_COLLECTION_SCHEMA,
   addNewAuthor,
   getAllAuthors,
   findOneById,
-  updateAuthor
+  updateAuthor,
+  deleteAuthorById
 }

@@ -93,6 +93,18 @@ const resolvers = {
       const updatedAuthor = await authorModel.updateAuthor(id, updateData)
       if (!updatedAuthor) return null
       return { ...updatedAuthor, id: updatedAuthor._id.toString() }
+    },
+    // Xóa book theo id, trả về book đã xóa
+    deleteBookById: async (parent, args) => {
+      const deletedBook = await bookModel.deleteBookById(args.id)
+      if (!deletedBook) return null
+      return { ...deletedBook, id: deletedBook._id.toString() }
+    },
+    // Xóa author theo id, trả về author đã xóa
+    deleteAuthorById: async (parent, args) => {
+      const deletedAuthor = await authorModel.deleteAuthorById(args.id)
+      if (!deletedAuthor) return null
+      return { ...deletedAuthor, id: deletedAuthor._id.toString() }
     }
   }
 }
