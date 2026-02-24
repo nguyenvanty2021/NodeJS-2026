@@ -39,6 +39,40 @@ const resolvers = {
       if (!author) return null
       return { ...author, id: author._id.toString() }
     }
+  },
+
+  // Resolver cho nested field: Author.books
+  // Khi query author có chứa field books, GraphQL sẽ gọi resolver này
+  // parent ở đây chính là object Author, dùng _id để tìm tất cả books có authorId trùng khớp
+  Author: {
+    books: async (parent) => {
+      const books = await bookModel.findByAuthorId(parent._id || parent.id)
+      return books.map(book => ({ ...book, id: book._id.toString() }))
+    }
+  },
+
+  // Mutation resolvers - xử lý các thao tác tạo/sửa/xóa dữ liệu
+  Mutation: {
+    // Tạo book mới, args chứa các tham số truyền vào từ client (name, genre, authorId)
+    addNewBook: async (parent, args) => {
+      const result = await bookModel.addNewBook({
+        name: args.name,
+        genre: args.genre,
+        authorId: args.authorId
+      })
+      // insertOne trả về insertedId, dùng nó để lấy lại document vừa tạo
+      const createdBook = await bookModel.findOneById(result.insertedId)
+      return { ...createdBook, id: createdBook._id.toString() }
+    },
+    // Tạo author mới
+    addNewAuthor: async (parent, args) => {
+      const result = await authorModel.addNewAuthor({
+        name: args.name,
+        age: args.age
+      })
+      const createdAuthor = await authorModel.findOneById(result.insertedId)
+      return { ...createdAuthor, id: createdAuthor._id.toString() }
+    }
   }
 }
 
