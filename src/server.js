@@ -14,11 +14,16 @@ import swaggerUi from 'swagger-ui-express'
 import YAML from 'yaml'
 import fs from 'fs'
 import path from 'path'
+import { ApolloServer } from 'apollo-server-express'
+
+// Load schema & resolvers
+import typeDefs from '~/schema/schema'
+import resolvers from '~/resolver/resolver'
 
 const file = fs.readFileSync(path.resolve('./swagger.yml'), 'utf8')
 const swaggerDocument = YAML.parse(file)
 
-const START_SERVER = () => {
+const START_SERVER = async () => {
   const app = express()
   app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument))
   // Fix cái vụ Cache from disk của ExpressJS
@@ -35,6 +40,14 @@ const START_SERVER = () => {
   // Bảo vệ API khỏi bị gọi từ những domain không được phép
   app.use(cors(corsOptions))
 
+  // Apollo Server - GraphQL (phải đặt trước express.json() để tránh xung đột đọc body stream)
+  const apolloServer = new ApolloServer({
+    typeDefs,
+    resolvers
+  })
+  await apolloServer.start()
+  apolloServer.applyMiddleware({ app })
+
   // Enable req.body JSON data - Middleware để parse dữ liệu JSON từ request body
   // Nếu không có middleware này, req.body sẽ là undefined khi client gửi JSON data
   app.use(express.json())
@@ -42,6 +55,7 @@ const START_SERVER = () => {
 
   // middleware xử lý lỗi tập trung
   app.use(errorHandlingMiddleware)
+
 
   //
   // Tạo một cái server mới bọc thằng app của express để làm real-time với socket.io
@@ -71,6 +85,8 @@ const START_SERVER = () => {
     server.listen(env.APP_PORT, () => {
       // eslint-disable-next-line no-console
       console.log(`3. Hi ${env.AUTHOR}, I am running at port ${env.APP_PORT}/ in production mode`)
+      // eslint-disable-next-line no-console
+      console.log(`GraphQL ready at http://localhost:${env.APP_PORT}${apolloServer.graphqlPath}`)
     })
   } else {
     // nếu không dùng socket thì chỉ cần app.listen
@@ -79,6 +95,8 @@ const START_SERVER = () => {
     server.listen(env.APP_PORT, env.APP_HOST, () => {
       // eslint-disable-next-line no-console
       console.log(`3. Hi ${env.AUTHOR}, I am running at http://${env.APP_HOST}:${env.APP_PORT}/`)
+      // eslint-disable-next-line no-console
+      console.log(`GraphQL ready at http://${env.APP_HOST}:${env.APP_PORT}${apolloServer.graphqlPath}`)
     })
   }
   // thực hiện các tác vụ cleanup trước khi dừng server
