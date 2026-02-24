@@ -49,11 +49,30 @@ const findByAuthorId = async (authorId) => {
   } catch (error) { throw new Error(error) }
 }
 
+const updateBookById = async ({ id, updateData }) => {
+  try {
+    // Lọc bỏ những field không được phép update
+    delete updateData._id
+    delete updateData.createdAt
+
+    // Cập nhật thời gian updatedAt
+    updateData.updatedAt = Date.now()
+
+    const result = await GET_DB().collection(BOOK_COLLECTION_NAME).findOneAndUpdate(
+      { _id: new ObjectId(id) },
+      { $set: updateData },
+      { returnDocument: 'after' }
+    )
+    return result
+  } catch (error) { throw new Error(error) }
+}
+
 export const bookModel = {
   BOOK_COLLECTION_NAME,
   BOOK_COLLECTION_SCHEMA,
   addNewBook,
   getAllBooks,
   findOneById,
-  findByAuthorId
+  findByAuthorId,
+  updateBookById
 }

@@ -72,6 +72,27 @@ const resolvers = {
       })
       const createdAuthor = await authorModel.findOneById(result.insertedId)
       return { ...createdAuthor, id: createdAuthor._id.toString() }
+    },
+    // Cập nhật book theo id, chỉ update những field được truyền vào
+    updateBookById: async (parent, args) => {
+      const { id, ...updateData } = args
+      // Lọc bỏ các field undefined (không được truyền từ client)
+      Object.keys(updateData).forEach(key => {
+        if (updateData[key] === undefined) delete updateData[key]
+      })
+      const updatedBook = await bookModel.updateBookById({ id, updateData })
+      if (!updatedBook) return null
+      return { ...updatedBook, id: updatedBook._id.toString() }
+    },
+    // Cập nhật author theo id
+    updateAuthorById: async (parent, args) => {
+      const { id, ...updateData } = args
+      Object.keys(updateData).forEach(key => {
+        if (updateData[key] === undefined) delete updateData[key]
+      })
+      const updatedAuthor = await authorModel.updateAuthor(id, updateData)
+      if (!updatedAuthor) return null
+      return { ...updatedAuthor, id: updatedAuthor._id.toString() }
     }
   }
 }

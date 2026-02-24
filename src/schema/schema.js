@@ -34,6 +34,9 @@ const typeDefs = gql`
     addNewBook(name: String!, genre: String!, authorId: ID!): Book
     # Tương tự, ": Author" nghĩa là sau khi tạo author, server trả về object Author vừa tạo
     addNewAuthor(name: String!, age: Int!): Author
+    # Update - các field không có ! nghĩa là optional, chỉ cần truyền field muốn cập nhật
+    updateBookById(id: ID!, name: String, genre: String, authorId: ID): Book
+    updateAuthorById(id: ID!, name: String, age: Int): Author
   }
 `
 

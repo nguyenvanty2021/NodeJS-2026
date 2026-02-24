@@ -39,10 +39,29 @@ const findOneById = async (id) => {
   } catch (error) { throw new Error(error) }
 }
 
+const updateAuthor = async (id, updateData) => {
+  try {
+    // Lọc bỏ những field không được phép update
+    delete updateData._id
+    delete updateData.createdAt
+
+    // Cập nhật thời gian updatedAt
+    updateData.updatedAt = Date.now()
+
+    const result = await GET_DB().collection(AUTHOR_COLLECTION_NAME).findOneAndUpdate(
+      { _id: new ObjectId(id) },
+      { $set: updateData },
+      { returnDocument: 'after' }
+    )
+    return result
+  } catch (error) { throw new Error(error) }
+}
+
 export const authorModel = {
   AUTHOR_COLLECTION_NAME,
   AUTHOR_COLLECTION_SCHEMA,
   addNewAuthor,
   getAllAuthors,
-  findOneById
+  findOneById,
+  updateAuthor
 }
