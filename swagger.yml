@@ -2,10 +2,64 @@ openapi: '3.0.3'
 info:
   title: Trello Clone - Board Management API
   description: |
-    RESTful API cho ứng dụng quản lý Board (Trello Clone).
-    Bao gồm các chức năng: Authentication, Board, Column, Card management.
+    RESTful API và GraphQL API cho ứng dụng quản lý Board (Trello Clone).
+    Bao gồm các chức năng: Authentication, Board, Column, Card management, và quản lý Books/Authors (GraphQL).
     
     **Authentication**: Sử dụng JWT (Bearer Token) với Access Token và Refresh Token (cookie).
+    
+    **GraphQL Endpoint**: `http://localhost:8017/graphql` (Apollo Sandbox)
+    
+    ## GraphQL API - Books & Authors
+    
+    ### Types
+    ```graphql
+    type Book {
+      id: ID
+      name: String
+      genre: String
+      author: Author    # Nested - tự động resolve author từ authorId
+    }
+    
+    type Author {
+      id: ID!
+      name: String
+      age: Int
+      books: [Book]     # Nested - tự động resolve tất cả books của author
+    }
+    ```
+    
+    ### Queries
+    | Query | Mô tả |
+    |---|---|
+    | `getAllBook` | Lấy tất cả books (kèm nested author) |
+    | `getBookById(id: ID!)` | Lấy book theo ID |
+    | `getAllAuthor` | Lấy tất cả authors (kèm nested books) |
+    | `getAuthorById(id: ID!)` | Lấy author theo ID |
+    
+    ### Mutations
+    | Mutation | Mô tả |
+    |---|---|
+    | `addNewBook(name: String!, genre: String!, authorId: ID!)` | Tạo book mới |
+    | `addNewAuthor(name: String!, age: Int!)` | Tạo author mới |
+    | `updateBookById(id: ID!, name: String, genre: String, authorId: ID)` | Cập nhật book |
+    | `updateAuthorById(id: ID!, name: String, age: Int)` | Cập nhật author |
+    | `deleteBookById(id: ID!)` | Xóa book theo ID |
+    | `deleteAuthorById(id: ID!)` | Xóa author theo ID |
+    
+    ### Query Examples
+    ```graphql
+    # Lấy tất cả books kèm author
+    query { getAllBook { id name genre author { id name age } } }
+    
+    # Tạo book mới
+    mutation { addNewBook(name: "Sách mới", genre: "Fiction", authorId: "...") { id name genre } }
+    
+    # Cập nhật book (chỉ cần truyền field muốn thay đổi)
+    mutation { updateBookById(id: "...", name: "Tên mới") { id name } }
+    
+    # Xóa book
+    mutation { deleteBookById(id: "...") { id name } }
+    ```
   version: '1.0.0'
   contact:
     name: Ty Nguyen

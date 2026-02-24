@@ -1,6 +1,6 @@
 # Trello Clone - Backend API (MERN Stack)
 
-RESTful API cho ứng dụng quản lý Board (Trello Clone) - xây dựng bằng Node.js, Express và MongoDB.
+RESTful API và GraphQL API cho ứng dụng quản lý Board (Trello Clone) - xây dựng bằng Node.js, Express và MongoDB.
 
 ## ✨ Tính năng
 
@@ -15,6 +15,11 @@ RESTful API cho ứng dụng quản lý Board (Trello Clone) - xây dựng bằn
 - Drag & Drop Columns và Cards (cập nhật thứ tự)
 - Tìm kiếm và phân trang
 
+### GraphQL API - Books & Authors
+- CRUD Books và Authors qua GraphQL (Apollo Server)
+- Nested queries: Book → Author, Author → Books (quan hệ 1-nhiều)
+- Apollo Sandbox tại `http://localhost:8017/graphql`
+
 ### Tính năng khác
 - Upload ảnh lên Cloudinary (avatar, card cover)
 - Real-time với Socket.IO (mời user vào board)
@@ -28,6 +33,7 @@ RESTful API cho ứng dụng quản lý Board (Trello Clone) - xây dựng bằn
 |---|---|
 | **Express 5** | Web framework |
 | **MongoDB** | Database (MongoDB Atlas) |
+| **Apollo Server** | GraphQL server (Books & Authors API) |
 | **Babel** | Transpiler (ES Modules, path alias `~`) |
 | **JWT** | Authentication (jsonwebtoken) |
 | **Auth0** | SSO với express-oauth2-jwt-bearer (RS256) |
@@ -44,9 +50,12 @@ src/
 ├── config/          # Cấu hình (environment, MongoDB, CORS)
 ├── controllers/     # Xử lý request/response
 ├── middlewares/     # Auth middleware, error handling, file upload
-├── models/          # MongoDB schemas & data access
+├── models/          # MongoDB schemas & data access (bao gồm book-model, author-model)
 ├── providers/       # Dịch vụ bên thứ 3 (Brevo, Cloudinary, JWT, Twilio, Resend, MailerSend)
 ├── routes/v1/       # API routes
+├── schema/          # GraphQL type definitions (schema.js)
+├── resolver/        # GraphQL resolvers (resolver.js)
+├── scripts/         # Seed data scripts (seed-graphql-data.js)
 ├── services/        # Business logic
 ├── sockets/         # Socket.IO event handlers
 ├── utils/           # Helpers, constants, validators
@@ -94,7 +103,13 @@ cp .env.example .env
 | `TWILIO_*` | Twilio SMS credentials |
 | `WEBSITE_DOMAIN_*` | Frontend domain (dev/production) |
 
-### 3. Chạy
+### 3. Seed dữ liệu mẫu cho GraphQL
+
+```bash
+npx babel-node ./src/scripts/seed-graphql-data.js
+```
+
+### 4. Chạy
 
 ```bash
 # Development (hot reload)
@@ -109,9 +124,13 @@ yarn production
 
 ## 📖 API Documentation
 
+### REST API
 Swagger UI có sẵn tại: `http://localhost:8017/api-docs`
 
-### Tổng quan API Endpoints
+### GraphQL API
+Apollo Sandbox có sẵn tại: `http://localhost:8017/graphql`
+
+### Tổng quan REST API Endpoints
 
 #### Users (Public)
 | Method | Endpoint | Mô tả |
@@ -156,6 +175,69 @@ Swagger UI có sẵn tại: `http://localhost:8017/api-docs`
 | `GET` | `/v1/2fa/get_2fa_qr_code` | Lấy QR Code 2FA (🔒 JWT) |
 | `POST` | `/v1/2fa/setup_2fa` | Thiết lập 2FA (🔒 JWT) |
 
+### Tổng quan GraphQL API (Books & Authors)
+
+Endpoint: `POST /graphql`
+
+#### Queries
+| Query | Mô tả |
+|---|---|
+| `getAllBook` | Lấy tất cả books (kèm nested author) |
+| `getBookById(id: ID!)` | Lấy book theo ID |
+| `getAllAuthor` | Lấy tất cả authors (kèm nested books) |
+| `getAuthorById(id: ID!)` | Lấy author theo ID |
+
+#### Mutations
+| Mutation | Mô tả |
+|---|---|
+| `addNewBook(name!, genre!, authorId!)` | Tạo book mới |
+| `addNewAuthor(name!, age!)` | Tạo author mới |
+| `updateBookById(id!, name?, genre?, authorId?)` | Cập nhật book |
+| `updateAuthorById(id!, name?, age?)` | Cập nhật author |
+| `deleteBookById(id!)` | Xóa book theo ID |
+| `deleteAuthorById(id!)` | Xóa author theo ID |
+
+#### Ví dụ GraphQL Queries
+
+```graphql
+# Lấy tất cả books kèm thông tin author
+query {
+  getAllBook {
+    id
+    name
+    genre
+    author { id name age }
+  }
+}
+
+# Lấy tất cả authors kèm danh sách books
+query {
+  getAllAuthor {
+    id
+    name
+    age
+    books { id name genre }
+  }
+}
+
+# Tạo book mới
+mutation {
+  addNewBook(name: "Sách mới", genre: "Fiction", authorId: "...") {
+    id name genre author { name }
+  }
+}
+
+# Cập nhật book (chỉ truyền field cần thay đổi)
+mutation {
+  updateBookById(id: "...", name: "Tên mới") { id name }
+}
+
+# Xóa book
+mutation {
+  deleteBookById(id: "...") { id name }
+}
+```
+
 ## 🌐 Deployment
 
 Project được deploy trên **Render** (Free tier):
@@ -167,7 +249,8 @@ Project được deploy trên **Render** (Free tier):
 ## 🏗 Kiến trúc (Layered Architecture)
 
 ```
-Request → Routes → Validation → Middleware (Auth) → Controller → Service → Model → MongoDB
+REST API:    Request → Routes → Validation → Middleware (Auth) → Controller → Service → Model → MongoDB
+GraphQL API: Request → Apollo Server → Schema → Resolver → Model → MongoDB
 ```
 
 - **Routes**: Định nghĩa endpoints và gắn middleware
@@ -176,6 +259,8 @@ Request → Routes → Validation → Middleware (Auth) → Controller → Servi
 - **Controllers**: Xử lý request/response, gọi service
 - **Services**: Business logic, gọi model
 - **Models**: Data access layer, tương tác MongoDB
+- **Schema**: Định nghĩa GraphQL types, queries, mutations
+- **Resolvers**: Xử lý logic cho GraphQL queries/mutations
 
 ## 📝 License
 
