@@ -16,6 +16,7 @@ import fs from 'fs'
 import path from 'path'
 import { ApolloServer } from 'apollo-server-express'
 import helmet from 'helmet'
+import { rateLimit } from 'express-rate-limit'
 
 // Load schema & resolvers
 import typeDefs from '~/schema/schema'
@@ -34,6 +35,22 @@ const START_SERVER = async () => {
   // - Và nhiều cơ chế bảo mật khác...
   // https://www.npmjs.com/package/helmet
   app.use(helmet())
+
+  // Giới hạn số lượng request từ một IP trong một khoảng thời gian (Rate Limiting)
+  // Giúp ngăn chặn các cuộc tấn công Brute Force hoặc DoS (Denial of Service)
+  const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 phút
+    limit: 100, // Giới hạn mỗi IP tối đa 100 requests trong 15 phút
+    standardHeaders: 'draft-7', // Trả về thông tin giới hạn trong các header chuẩn `RateLimit-*`
+    legacyHeaders: false, // Tắt các header cũ `X-RateLimit-*`
+    message: 'Too many requests from this IP, please try again after 15 minutes',
+    // eslint-disable-next-line no-unused-vars
+    handler: (req, res, next, options) => {
+      res.status(options.statusCode).json({ message: options.message })
+    }
+  })
+  // Áp dụng limiter cho tất cả các requests
+  app.use(limiter)
 
   app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument))
   // Fix cái vụ Cache from disk của ExpressJS
