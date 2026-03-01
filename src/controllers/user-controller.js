@@ -2,6 +2,7 @@ import { StatusCodes } from 'http-status-codes'
 import { userService } from '~/services/user-service'
 import ms from 'ms'
 import ApiError from '~/utils/api-error'
+import { WEBSITE_DOMAIN } from '~/utils/constants'
 
 const register = async (req, res, next) => {
   try {
@@ -123,6 +124,87 @@ const getAll = async (req, res, next) => {
   } catch (error) { next(error) }
 }
 
+/**
+ * Temporary code store - lưu tạm tokens theo code ngắn hạn
+ * Key: temporary code (UUID), Value: { tokens, expiredAt }
+ * Code chỉ sống 2 phút và chỉ dùng được 1 lần
+ */
+const tempCodeStore = new Map()
+
+const loginWithGoogle = async (req, res, next) => {
+  try {
+    const { code } = req.query
+    // eslint-disable-next-line no-console
+    console.log('req.url: ', req.url)
+    if (!code) {
+      throw new ApiError(StatusCodes.BAD_REQUEST, 'Authorization code is required!')
+    }
+
+    const result = await userService.loginWithGoogle(code)
+
+    // Tạo temporary code ngắn hạn (UUID), lưu tokens vào Map
+    const { v4: uuidv4 } = await import('uuid')
+    const tempCode = uuidv4()
+    tempCodeStore.set(tempCode, {
+      tokens: result,
+      expiredAt: Date.now() + 2 * 60 * 1000 // Hết hạn sau 2 phút
+    })
+
+    // Chỉ redirect kèm temporary code, KHÔNG kèm tokens thật trên URL
+    res.redirect(`${WEBSITE_DOMAIN}/login?code=${tempCode}`)
+  } catch (error) { next(error) }
+}
+
+/**
+ * Frontend gọi API này để đổi temporary code lấy tokens thật
+ * POST /v1/users/oauth-google/token
+ * Body: { code: 'uuid-temp-code' }
+ */
+const exchangeGoogleToken = async (req, res, next) => {
+  try {
+    const { code } = req.body
+
+    if (!code) {
+      throw new ApiError(StatusCodes.BAD_REQUEST, 'Temporary code is required!')
+    }
+
+    // Lấy tokens từ Map
+    const stored = tempCodeStore.get(code)
+
+    if (!stored) {
+      throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid or expired code!')
+    }
+
+    // Kiểm tra hết hạn
+    if (Date.now() > stored.expiredAt) {
+      tempCodeStore.delete(code)
+      throw new ApiError(StatusCodes.BAD_REQUEST, 'Code has expired!')
+    }
+
+    // Xóa code khỏi Map (chỉ dùng 1 lần)
+    tempCodeStore.delete(code)
+
+    const result = stored.tokens
+
+    // Set cookies cho các API call sau
+    res.cookie('accessToken', result.accessToken, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'none',
+      maxAge: ms('14 days')
+    })
+    res.cookie('refreshToken', result.refreshToken, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'none',
+      maxAge: ms('14 days')
+    })
+
+    // Trả tokens trong response body cho frontend xử lý
+    res.status(StatusCodes.OK).json(result)
+  } catch (error) { next(error) }
+}
+
 export const userController = {
   register,
   verifyAccount,
@@ -131,5 +213,8 @@ export const userController = {
   refreshToken,
   updateAccount,
   hookLogin,
-  getAll
+  getAll,
+  loginWithGoogle,
+  exchangeGoogleToken
 }
+

@@ -45,4 +45,13 @@ Router.route('/private/hook/login')
 Router.route('/private/get_all')
   .get(auth2Middleware.auth0JwtCheck, userController.getAll)
 
+// Google OAuth 2.0: API nhận authorization code từ Google và xử lý login
+Router.route('/oauth-google')
+  .get(userController.loginWithGoogle)
+
+// Google OAuth 2.0: Frontend gọi API này để đổi temporary code lấy tokens thật
+Router.route('/oauth-google/token')
+  .post(userController.exchangeGoogleToken)
+
 export const userRoutes = Router
+

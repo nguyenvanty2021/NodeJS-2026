@@ -294,6 +294,89 @@ const getAll = async () => {
   } catch (error) { throw error }
 }
 
+/**
+ * Google OAuth 2.0 Login
+ * Bước 1: Đổi authorization code lấy access_token từ Google
+ * Bước 2: Dùng access_token lấy thông tin user (email, name, picture)
+ * Bước 3: Tìm hoặc tạo user trong DB
+ * Bước 4: Tạo JWT tokens (accessToken, refreshToken)
+ */
+const loginWithGoogle = async (code) => {
+  // eslint-disable-next-line no-useless-catch
+  try {
+    // Bước 1: Đổi authorization code lấy access_token từ Google
+    const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        code: code,
+        client_id: env.GOOGLE_CLIENT_ID,
+        client_secret: env.GOOGLE_CLIENT_SECRET,
+        redirect_uri: env.GOOGLE_REDIRECT_URI,
+        grant_type: 'authorization_code'
+      })
+    })
+    const tokenData = await tokenResponse.json()
+
+    if (!tokenData.access_token) {
+      throw new ApiError(StatusCodes.BAD_REQUEST, 'Failed to get access token from Google!')
+    }
+
+    // Bước 2: Dùng access_token lấy thông tin user từ Google
+    const userInfoResponse = await fetch(`https://www.googleapis.com/oauth2/v1/userinfo?access_token=${tokenData.access_token}`)
+    const googleUser = await userInfoResponse.json()
+
+    if (!googleUser.email) {
+      throw new ApiError(StatusCodes.BAD_REQUEST, 'Failed to get user info from Google!')
+    }
+
+    // Bước 3: Kiểm tra user đã tồn tại trong DB chưa
+    let user = await userModel.findOneByEmail(googleUser.email)
+
+    if (!user) {
+      // User chưa tồn tại => Tạo mới
+      const nameFromEmail = googleUser.email.split('@')[0]
+      const newUser = {
+        email: googleUser.email,
+        password: bcryptjs.hashSync(uuidv4(), 8), // Password ngẫu nhiên vì Google quản lý authentication
+        username: nameFromEmail,
+        displayName: googleUser.name || nameFromEmail,
+        avatar: googleUser.picture || null,
+        isActive: true // User từ Google đã được xác thực
+      }
+
+      const createdUser = await userModel.createNew(newUser)
+      user = await userModel.findOneById(createdUser.insertedId)
+    }
+
+    // Nếu user tồn tại nhưng chưa active thì active luôn
+    if (!user.isActive) {
+      user = await userModel.update(user._id, { isActive: true, verifyToken: null })
+    }
+
+    // Bước 4: Tạo JWT tokens
+    const userInfo = { _id: user._id, email: user.email, role: user.role }
+
+    const accessToken = await JwtProvider.generateToken({
+      userInfo,
+      secretSignature: env.ACCESS_TOKEN_SECRET_SIGNATURE,
+      tokenLife: env.ACCESS_TOKEN_LIFE
+    })
+
+    const refreshToken = await JwtProvider.generateToken({
+      userInfo,
+      secretSignature: env.REFRESH_TOKEN_SECRET_SIGNATURE,
+      tokenLife: env.REFRESH_TOKEN_LIFE
+    })
+
+    return {
+      accessToken,
+      refreshToken,
+      ...pickData({ objectPick: user, getListFields: ['_id', 'email', 'username', 'displayName', 'avatar', 'role', 'isActive', 'createdAt', 'updatedAt'] })
+    }
+  } catch (error) { throw error }
+}
+
 export const userService = {
   register,
   verifyAccount,
@@ -302,5 +385,6 @@ export const userService = {
   updateAccount,
   findOneByEmail,
   createNew,
-  getAll
+  getAll,
+  loginWithGoogle
 }
