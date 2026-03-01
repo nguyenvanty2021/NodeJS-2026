@@ -15,6 +15,7 @@ import YAML from 'yaml'
 import fs from 'fs'
 import path from 'path'
 import { ApolloServer } from 'apollo-server-express'
+import helmet from 'helmet'
 
 // Load schema & resolvers
 import typeDefs from '~/schema/schema'
@@ -25,6 +26,15 @@ const swaggerDocument = YAML.parse(file)
 
 const START_SERVER = async () => {
   const app = express()
+
+  // Helmet giúp bảo mật ứng dụng bằng cách thiết lập các HTTP headers khác nhau:
+  // - Chống Clickjacking (X-Frame-Options)
+  // - Chống XSS (X-XSS-Protection)
+  // - Ngăn chặn MIME type sniffing (X-Content-Type-Options)
+  // - Và nhiều cơ chế bảo mật khác...
+  // https://www.npmjs.com/package/helmet
+  app.use(helmet())
+
   app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument))
   // Fix cái vụ Cache from disk của ExpressJS
   // https://stackoverflow.com/a/53240717/8324172
