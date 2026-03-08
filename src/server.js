@@ -17,17 +17,20 @@ import path from 'path'
 import { ApolloServer } from 'apollo-server-express'
 import helmet from 'helmet'
 import { rateLimit } from 'express-rate-limit'
+import { initFolder } from '~/utils/file'
 
 // Load schema & resolvers
 import typeDefs from '~/schema/schema'
 import resolvers from '~/resolver/resolver'
+import { UPLOAD_DIR } from './constants/dir'
 
 const file = fs.readFileSync(path.resolve('./swagger.yml'), 'utf8')
 const swaggerDocument = YAML.parse(file)
 
 const START_SERVER = async () => {
   const app = express()
-
+  // check và tạo folder uploads file nếu chưa có
+  initFolder()
   // Helmet giúp bảo mật ứng dụng bằng cách thiết lập các HTTP headers khác nhau:
   // - Chống Clickjacking (X-Frame-Options)
   // - Chống XSS (X-XSS-Protection)
@@ -78,6 +81,15 @@ const START_SERVER = async () => {
   // Enable req.body JSON data - Middleware để parse dữ liệu JSON từ request body
   // Nếu không có middleware này, req.body sẽ là undefined khi client gửi JSON data
   app.use(express.json())
+
+  // Serve static files from the 'uploads' directory
+  // Serve static files - cho phép truy cập trực tiếp các file trong folder 'uploads' qua URL
+  // Ví dụ: file uploads/abc123.jpg sẽ truy cập được qua http://localhost:8017/abc123.jpg
+  // express.static() biến một folder trên server thành "public folder", client có thể request file trực tiếp
+  // mà không cần tạo route riêng cho từng file
+  //app.use(express.static(UPLOAD_DIR))
+  app.use('/static', express.static(UPLOAD_DIR)) // khi đó url sẽ là http://localhost:8017/static/abc123.jpg
+
   app.use('/v1', APIs_V1)
 
   // middleware xử lý lỗi tập trung

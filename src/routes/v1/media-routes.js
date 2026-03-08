@@ -1,9 +1,12 @@
 import express from 'express'
-import { mediaController } from '~/controllers/media-controller'
+import { uploadSingleImageController, getStaticImageController } from '~/controllers/media-controller'
 
 const Router = express.Router()
 
-Router.route('/upload_avatar')
-  .post(mediaController.uploadAvatar)
+Router.route('/upload_file')
+  .post(uploadSingleImageController)
+
+Router.route('/static/:name')
+  .get(getStaticImageController)
 
 export const mediaRoutes = Router
