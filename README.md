@@ -20,6 +20,12 @@ RESTful API và GraphQL API cho ứng dụng quản lý Board (Trello Clone) - x
 - Nested queries: Book → Author, Author → Books (quan hệ 1-nhiều)
 - Apollo Sandbox tại `http://localhost:8017/graphql`
 
+### Media Upload
+- Upload ảnh (hỗ trợ multi-file, tối đa 4 file/request)
+- Xử lý ảnh bằng Sharp (convert WebP, nén quality 80%)
+- Serve static files qua Express
+- Formidable để parse multipart/form-data
+
 ### Tính năng khác
 - Upload ảnh lên Cloudinary (avatar, card cover)
 - Real-time với Socket.IO (mời user vào board)
@@ -39,6 +45,8 @@ RESTful API và GraphQL API cho ứng dụng quản lý Board (Trello Clone) - x
 | **Auth0** | SSO với express-oauth2-jwt-bearer (RS256) |
 | **Socket.IO** | Real-time communication |
 | **Cloudinary** | Image upload & storage |
+| **Sharp** | Image processing (convert, resize, compress) |
+| **Formidable** | Multipart form-data parsing (file upload) |
 | **Joi** | Request validation |
 | **Swagger UI** | API documentation |
 | **Nodemon** | Hot reload (development) |
@@ -48,6 +56,7 @@ RESTful API và GraphQL API cho ứng dụng quản lý Board (Trello Clone) - x
 ```
 src/
 ├── config/          # Cấu hình (environment, MongoDB, CORS)
+├── constants/       # Hằng số (dir.js - đường dẫn upload)
 ├── controllers/     # Xử lý request/response
 ├── middlewares/     # Auth middleware, error handling, file upload
 ├── models/          # MongoDB schemas & data access (bao gồm book-model, author-model)
@@ -56,11 +65,13 @@ src/
 ├── schema/          # GraphQL type definitions (schema.js)
 ├── resolver/        # GraphQL resolvers (resolver.js)
 ├── scripts/         # Seed data scripts (seed-graphql-data.js)
-├── services/        # Business logic
+├── services/        # Business logic (board, column, card, media)
 ├── sockets/         # Socket.IO event handlers
-├── utils/           # Helpers, constants, validators
+├── utils/           # Helpers (file.js - upload parsing, validators)
 ├── validations/     # Joi validation schemas
 └── server.js        # Entry point
+uploads/             # Ảnh đã xử lý (WebP) - gitignored
+uploads/temp/        # Ảnh tạm trước khi xử lý - gitignored
 ```
 
 ## 🚀 Cài đặt & Chạy
@@ -101,6 +112,7 @@ cp .env.example .env
 | `RESEND_API_KEY` | Resend email API key |
 | `MAILER_SEND_API_KEY` | MailerSend email API key |
 | `TWILIO_*` | Twilio SMS credentials |
+| `HOST` | Domain cho production (dùng trong URL ảnh upload) |
 | `WEBSITE_DOMAIN_*` | Frontend domain (dev/production) |
 
 ### 3. Seed dữ liệu mẫu cho GraphQL
@@ -168,6 +180,12 @@ Apollo Sandbox có sẵn tại: `http://localhost:8017/graphql`
 |---|---|---|
 | `POST` | `/v1/cards` | Tạo card (🔒 JWT) |
 | `PUT` | `/v1/cards/:id` | Cập nhật card (🔒 JWT) |
+
+#### Media
+| Method | Endpoint | Mô tả |
+|---|---|---|
+| `POST` | `/v1/media/upload_file` | Upload ảnh (tối đa 4 file, convert WebP) |
+| `GET` | `/v1/media/static/:name` | Lấy ảnh tĩnh theo tên file |
 
 #### Two-Factor Authentication
 | Method | Endpoint | Mô tả |
@@ -255,7 +273,7 @@ GraphQL API: Request → Apollo Server → Schema → Resolver → Model → Mon
 
 - **Routes**: Định nghĩa endpoints và gắn middleware
 - **Validations**: Validate request body bằng Joi
-- **Middlewares**: Xác thực JWT, Auth0 JWT, upload file (Multer)
+- **Middlewares**: Xác thực JWT, Auth0 JWT, upload file (Formidable)
 - **Controllers**: Xử lý request/response, gọi service
 - **Services**: Business logic, gọi model
 - **Models**: Data access layer, tương tác MongoDB

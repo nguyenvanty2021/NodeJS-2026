@@ -80,6 +80,8 @@ tags:
     description: Quản lý cards trong column
   - name: Two Factor Authentication
     description: Quản lý xác thực 2 bước (2FA) bằng OTP
+  - name: Media
+    description: Upload và xử lý ảnh (formidable + sharp, convert WebP)
 
 components:
   securitySchemes:
@@ -429,6 +431,25 @@ components:
           type: string
         stack:
           type: string
+
+    # ========== MEDIA ==========
+    MediaUploadResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Upload image successfully
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              url:
+                type: string
+                example: http://localhost:8017/static/abc123def456.webp
+              type:
+                type: string
+                example: image
 
 paths:
   # ========== STATUS ==========
@@ -1013,3 +1034,66 @@ paths:
           description: Chưa đăng nhập
         '406':
           description: OTP không hợp lệ
+
+  # ========== MEDIA ==========
+  /media/upload_file:
+    post:
+      summary: Upload ảnh (hỗ trợ multi-file)
+      description: |
+        Upload tối đa 4 ảnh cùng lúc.
+        - Gửi qua form-data với field name `image` (type: File)
+        - Chỉ chấp nhận file ảnh (image/jpeg, image/png, image/webp...)
+        - Giới hạn mỗi file tối đa 10MB
+        - Ảnh sẽ được convert sang WebP (quality 80%) bằng Sharp
+        - Trả về URL truy cập ảnh tĩnh
+      tags: [Media]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                image:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+                  description: File ảnh cần upload (tối đa 4 file, field name phải là `image`)
+      responses:
+        '200':
+          description: Upload thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MediaUploadResponse'
+        '400':
+          description: File type không hợp lệ hoặc thiếu file
+        '500':
+          description: Lỗi server
+
+  /media/static/{name}:
+    get:
+      summary: Lấy ảnh tĩnh theo tên file
+      description: |
+        Trả về file ảnh đã xử lý từ folder uploads/.
+        Tên file lấy từ trường `url` trong response của API upload.
+      tags: [Media]
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Tên file ảnh (ví dụ abc123.webp)
+          example: abc123def456.webp
+      responses:
+        '200':
+          description: File ảnh
+          content:
+            image/webp:
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: Không tìm thấy file
