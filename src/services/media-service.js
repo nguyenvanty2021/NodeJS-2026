@@ -1,5 +1,5 @@
-import { hanldeUploadSingleImage, getNameFromFullname } from '~/utils/file'
-import { UPLOAD_DIR } from '~/constants/dir'
+import { hanldeUploadSingleImage, handleUploadVideo, getNameFromFullname } from '~/utils/file'
+import { UPLOAD_DIR, UPLOAD_VIDEO_DIR } from '~/constants/dir'
 import { env } from '~/config/environment'
 import sharp from 'sharp'
 import path from 'path'
@@ -11,7 +11,8 @@ import fs from 'fs'
  */
 export const handleUploadSingleImage = async (req) => {
   const files = await hanldeUploadSingleImage(req)
-  // vì allow upload multi file nên dùng Promsie.all
+
+  // vì allow upload multi file nên dùng Promise.all
   const result = await Promise.all(files.map(async (file) => {
     // Cắt bỏ extension gốc (.png, .jpg, .bmp...) vì sharp sẽ convert sang WebP
     // Ví dụ: 'abc123.png' → 'abc123'
@@ -38,6 +39,38 @@ export const handleUploadSingleImage = async (req) => {
     return {
       url: `${baseUrl}/static/${newName}.webp`,
       type: 'image'
+    }
+  }))
+
+  return result
+}
+
+/**
+ * Xử lý upload video: parse file → move từ temp sang uploads/videos → trả URL
+ * Video không qua sharp (sharp chỉ xử lý ảnh)
+ */
+export const handleUploadVideoService = async (req) => {
+  const files = await handleUploadVideo(req)
+
+  const result = await Promise.all(files.map(async (file) => {
+    const newName = getNameFromFullname(file.newFilename)
+    const mimetype = file.mimetype || ''
+
+    // Lấy extension từ mimetype (không dùng tên file gốc vì có thể bị sai, vd: ssstwitter.com → .com)
+    const videoExt = mimetype.includes('mp4') ? '.mp4' : '.mov'
+    const videoFileName = `${newName}${videoExt}`
+    const newPath = path.resolve(UPLOAD_VIDEO_DIR, videoFileName)
+
+    // Move file từ temp sang uploads/videos
+    fs.renameSync(file.filepath, newPath)
+
+    const baseUrl = env.BUILD_MODE === 'production'
+      ? env.HOST
+      : `http://localhost:${env.APP_PORT}`
+
+    return {
+      url: `${baseUrl}/v1/media/video-stream/${videoFileName}`,
+      type: 'video'
     }
   }))
 

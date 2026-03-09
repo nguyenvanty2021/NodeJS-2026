@@ -1,20 +1,24 @@
 import fs from 'fs'
-import { UPLOAD_TEMP_DIR } from '~/constants/dir'
+import { UPLOAD_TEMP_DIR, UPLOAD_VIDEO_DIR } from '~/constants/dir'
 
 /**
- * Khởi tạo folder uploads/temp nếu chưa tồn tại
+ * Khởi tạo folder uploads/temp và uploads/videos nếu chưa tồn tại
  * Gọi 1 lần khi server khởi động (trong server.js)
  */
 export const initFolder = () => {
+  // Tạo folder uploads/temp cho file tạm
   if (!fs.existsSync(UPLOAD_TEMP_DIR)) {
     fs.mkdirSync(UPLOAD_TEMP_DIR, { recursive: true })
+  }
+  // Tạo folder uploads/videos cho video
+  if (!fs.existsSync(UPLOAD_VIDEO_DIR)) {
+    fs.mkdirSync(UPLOAD_VIDEO_DIR, { recursive: true })
   }
 }
 
 /**
- * Parse file upload từ request bằng formidable
- * @param {Request} req - Express request object
- * @returns {Promise<Array>} Mảng PersistentFile đã upload
+ * Parse file UPLOAD IMAGE từ request bằng formidable
+ * Chỉ chấp nhận file ảnh (key: 'image', mimetype: image/*)
  */
 export const hanldeUploadSingleImage = async (req) => {
   const formidable = (await import('formidable')).default
@@ -46,6 +50,41 @@ export const hanldeUploadSingleImage = async (req) => {
       // run api nhưng chưa truyền file
       if (!Boolean(files.image)) return reject(new Error('File is required'))
       resolve(files.image)
+    })
+  })
+}
+
+/**
+ * Parse file UPLOAD VIDEO từ request bằng formidable
+ * Chỉ chấp nhận video (key: 'video', mimetype bắt đầu bằng 'video/')
+ */
+export const handleUploadVideo = async (req) => {
+  const formidable = (await import('formidable')).default
+
+  const form = formidable({
+    uploadDir: UPLOAD_TEMP_DIR,
+    maxFiles: 4,
+    // Giữ nguyên phần mở rộng file gốc (.mp4, .mov...)
+    keepExtensions: true,
+    maxFileSize: 50000 * 1024, // 50MB - video thường nặng hơn ảnh
+    // nếu không check filter thì upload được tất cả file bao gồm: pdf, json, jpg, png,...
+    filter: function ({ name, originalFilename, mimetype }) {
+      // Kiểm tra file hợp lệ (video):
+      // Video: key form-data = 'video' + mimetype bắt đầu bằng 'video/' (video/mp4, video/quicktime,...)
+      const valid = name === 'video' && Boolean(mimetype?.startsWith('video/'))
+      if (!valid) {
+        form.emit('error', new Error('File type is not valid'))
+      }
+      return valid
+    }
+  })
+
+  return new Promise((resolve, reject) => {
+    form.parse(req, (err, fields, files) => {
+      if (err) return reject(err)
+      // run api nhưng chưa truyền file video (hoặc Postman chưa gửi file - cần chọn lại file)
+      if (!Boolean(files.video)) return reject(new Error('Video file is required (dùng key "video", type File trong form-data)'))
+      resolve(files.video)
     })
   })
 }
