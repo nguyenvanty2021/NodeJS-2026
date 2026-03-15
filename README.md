@@ -20,11 +20,17 @@ RESTful API và GraphQL API cho ứng dụng quản lý Board (Trello Clone) - x
 - Nested queries: Book → Author, Author → Books (quan hệ 1-nhiều)
 - Apollo Sandbox tại `http://localhost:8017/graphql`
 
-### Media Upload
+### Media Upload & Video Streaming
 - Upload ảnh (hỗ trợ multi-file, tối đa 4 file/request)
 - Xử lý ảnh bằng Sharp (convert WebP, nén quality 80%)
-- Serve static files qua Express
+- Upload video thường + streaming với Range header (tua/seek)
+- Upload video HLS (HTTP Live Streaming):
+  - Encode multi-resolution (720p, 1080p, 1440p) bằng FFmpeg
+  - Adaptive bitrate streaming (tự chuyển quality theo tốc độ mạng)
+  - Queue system xử lý tuần tự (tránh server quá tải)
+  - Theo dõi trạng thái encode (Pending → Processing → Success/Failed) trong MongoDB
 - Formidable để parse multipart/form-data
+- Serve static files qua Express
 
 ### Tính năng khác
 - Upload ảnh lên Cloudinary (avatar, card cover)
@@ -46,6 +52,7 @@ RESTful API và GraphQL API cho ứng dụng quản lý Board (Trello Clone) - x
 | **Socket.IO** | Real-time communication |
 | **Cloudinary** | Image upload & storage |
 | **Sharp** | Image processing (convert, resize, compress) |
+| **FFmpeg** | Video encoding (HLS multi-resolution streaming) |
 | **Formidable** | Multipart form-data parsing (file upload) |
 | **Joi** | Request validation |
 | **Swagger UI** | API documentation |
@@ -59,7 +66,7 @@ src/
 ├── constants/       # Hằng số (dir.js - đường dẫn upload)
 ├── controllers/     # Xử lý request/response
 ├── middlewares/     # Auth middleware, error handling, file upload
-├── models/          # MongoDB schemas & data access (bao gồm book-model, author-model)
+├── models/          # MongoDB schemas & data access (board, user, video-status...)
 ├── providers/       # Dịch vụ bên thứ 3 (Brevo, Cloudinary, JWT, Twilio, Resend, MailerSend)
 ├── routes/v1/       # API routes
 ├── schema/          # GraphQL type definitions (schema.js)
@@ -67,11 +74,14 @@ src/
 ├── scripts/         # Seed data scripts (seed-graphql-data.js)
 ├── services/        # Business logic (board, column, card, media)
 ├── sockets/         # Socket.IO event handlers
-├── utils/           # Helpers (file.js - upload parsing, validators)
+├── utils/           # Helpers (file.js, video.js, queue.js, validators)
 ├── validations/     # Joi validation schemas
 └── server.js        # Entry point
-uploads/             # Ảnh đã xử lý (WebP) - gitignored
-uploads/temp/        # Ảnh tạm trước khi xử lý - gitignored
+uploads/
+├── images/          # Ảnh đã xử lý (WebP) - gitignored
+├── images/temp/     # Ảnh tạm trước khi xử lý - gitignored
+├── videos/          # Video và HLS segments - gitignored
+└── videos/temp/     # Video tạm trước khi xử lý - gitignored
 ```
 
 ## 🚀 Cài đặt & Chạy
@@ -186,6 +196,11 @@ Apollo Sandbox có sẵn tại: `http://localhost:8017/graphql`
 |---|---|---|
 | `POST` | `/v1/media/upload_file` | Upload ảnh (tối đa 4 file, convert WebP) |
 | `GET` | `/v1/media/static/:name` | Lấy ảnh tĩnh theo tên file |
+| `POST` | `/v1/media/upload_video` | Upload video thường |
+| `GET` | `/v1/media/video-stream/:name` | Stream video (Range header, tua/seek) |
+| `POST` | `/v1/media/upload_video_hls` | Upload video HLS (encode multi-quality) |
+| `GET` | `/v1/media/video-hls/*path` | Serve file HLS (.m3u8 playlist, .ts segments) |
+| `GET` | `/v1/media/video-status/:id` | Lấy trạng thái encode video HLS |
 
 #### Two-Factor Authentication
 | Method | Endpoint | Mô tả |

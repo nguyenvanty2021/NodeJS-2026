@@ -81,7 +81,11 @@ tags:
   - name: Two Factor Authentication
     description: Quản lý xác thực 2 bước (2FA) bằng OTP
   - name: Media
-    description: Upload và xử lý ảnh (formidable + sharp, convert WebP)
+    description: |
+      Upload và xử lý media (ảnh, video).
+      - Ảnh: formidable + sharp (convert WebP)
+      - Video thường: upload + stream (Range header)
+      - Video HLS: upload + encode multi-quality (FFmpeg) + queue + theo dõi trạng thái encode
 
 components:
   securitySchemes:
@@ -450,6 +454,67 @@ components:
               type:
                 type: string
                 example: image
+
+    VideoUploadResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Upload video successfully
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              url:
+                type: string
+                example: http://localhost:8017/v1/media/video-stream/abc123.mp4
+              type:
+                type: string
+                example: video
+
+    VideoHLSUploadResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Upload video HLS successfully
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              url:
+                type: string
+                example: http://localhost:8017/v1/media/video-hls/abc123/master.m3u8
+              type:
+                type: string
+                example: hls
+
+    VideoStatusResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Get video status successfully
+        data:
+          type: object
+          properties:
+            _id:
+              type: string
+            name:
+              type: string
+              example: abc123
+            status:
+              type: string
+              enum: [pending, processing, success, failed]
+              example: success
+            createdAt:
+              type: number
+            updatedAt:
+              type: string
+              format: date-time
+              nullable: true
 
 paths:
   # ========== STATUS ==========
@@ -1097,3 +1162,167 @@ paths:
                 format: binary
         '404':
           description: Không tìm thấy file
+
+  /media/upload_video:
+    post:
+      summary: Upload video thường
+      description: |
+        Upload 1 video (tối đa 50MB).
+        - Gửi qua form-data với field name `video` (type: File)
+        - Video được lưu nguyên vào uploads/videos/
+        - Trả về URL video-stream để phát video
+        - Ưu điểm: đơn giản, nhanh (không encode)
+        - Nhược điểm: chỉ 1 chất lượng, không hỗ trợ adaptive bitrate
+      tags: [Media]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                video:
+                  type: string
+                  format: binary
+                  description: File video cần upload (field name phải là `video`)
+      responses:
+        '200':
+          description: Upload thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VideoUploadResponse'
+        '400':
+          description: File type không hợp lệ hoặc thiếu file
+        '500':
+          description: Lỗi server
+
+  /media/video-stream/{name}:
+    get:
+      summary: Stream video (Range header)
+      description: |
+        Phát video đã upload, hỗ trợ Range header để tua/seek.
+        - Chia video thành chunks 1MB để stream
+        - Phát ngay khi có chunk đầu (không chờ tải hết)
+        - Tua tự do bằng Range header
+        - Tiết kiệm bandwidth (chỉ tải phần đang xem)
+      tags: [Media]
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Tên file video
+          example: abc123.mp4
+      responses:
+        '206':
+          description: Partial Content (chunk video)
+          headers:
+            Content-Range:
+              schema:
+                type: string
+              description: 'bytes start-end/total'
+          content:
+            video/mp4:
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: Không tìm thấy file
+
+  /media/upload_video_hls:
+    post:
+      summary: Upload video HLS (encode multi-quality)
+      description: |
+        Upload video → server encode thành HLS (HTTP Live Streaming) multi-resolution.
+        - Gửi qua form-data với field name `video` (type: File)
+        - Server encode thành nhiều chất lượng (720p, 1080p, 1440p) bằng FFmpeg
+        - Encode chạy nền (queue) → API trả về URL ngay, không chờ encode xong
+        - Dùng GET /video-status/:id để theo dõi tiến trình encode
+        - Sau khi encode xong, video phát qua URL master.m3u8
+        - Hỗ trợ adaptive bitrate: mạng nhanh → 1080p, mạng chậm → tự hạ 720p
+      tags: [Media]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                video:
+                  type: string
+                  format: binary
+                  description: File video cần upload (field name phải là `video`)
+      responses:
+        '200':
+          description: Upload thành công, video đang encode trong background
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VideoHLSUploadResponse'
+        '400':
+          description: File type không hợp lệ hoặc thiếu file
+        '500':
+          description: Lỗi server
+
+  /media/video-hls/{path}:
+    get:
+      summary: Serve file HLS (.m3u8 và .ts)
+      description: |
+        Trả về file HLS (.m3u8 playlist hoặc .ts segment) để player phát video.
+        - Ví dụ: /video-hls/abc123/master.m3u8 (playlist chính)
+        - Ví dụ: /video-hls/abc123/v0/prog_index.m3u8 (playlist 720p)
+        - Ví dụ: /video-hls/abc123/v0/fileSequence0.ts (chunk video)
+        - Cần dùng HLS player (hls.js, Safari, VLC) để phát
+      tags: [Media]
+      parameters:
+        - name: path
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Đường dẫn file HLS (ví dụ abc123/master.m3u8)
+          example: abc123/master.m3u8
+      responses:
+        '200':
+          description: File HLS
+          content:
+            application/vnd.apple.mpegurl:
+              schema:
+                type: string
+            video/mp2t:
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: Không tìm thấy file
+
+  /media/video-status/{id}:
+    get:
+      summary: Lấy trạng thái encode video HLS
+      description: |
+        Trả về trạng thái encode video HLS theo tên (id).
+        Frontend gọi API này để biết video encode xong chưa.
+        - pending: video đang chờ trong queue
+        - processing: đang encode bằng FFmpeg
+        - success: encode xong, HLS sẵn sàng phát
+        - failed: encode lỗi
+      tags: [Media]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Tên video (phần id trong URL HLS)
+          example: abc123
+      responses:
+        '200':
+          description: Trạng thái encode video
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VideoStatusResponse'
+        '404':
+          description: Không tìm thấy video
