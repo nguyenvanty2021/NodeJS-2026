@@ -4,6 +4,7 @@ import { StatusCodes } from 'http-status-codes'
 import mime from 'mime'
 import path from 'path'
 import fs from 'fs'
+import { handleUploadVideoHLSService, getVideoStatusService } from '~/services/media-service'
 
 // Controller xử lý upload ảnh
 export const uploadSingleImageController = async (req, res, next) => {
@@ -135,4 +136,51 @@ export const serveVideoStreamController = (req, res, next) => {
   const videoStream = fs.createReadStream(videoPath, { start, end })
   // Pipe: đẩy chunk từ file stream → response → gửi về client
   videoStream.pipe(res)
+}
+
+// Controller xử lý upload video HLS (encode multi-resolution)
+export const uploadVideoHLSController = async (req, res, next) => {
+  const data = await handleUploadVideoHLSService(req)
+
+  return res.json({
+    message: 'Upload video HLS successfully',
+    data
+  })
+}
+
+/**
+ * Controller serve file HLS (.m3u8 playlist và .ts segments)
+ *
+ * URL: GET /v1/media/video-hls/:id/:v/:segment
+ * Ví dụ:
+ *   /v1/media/video-hls/abc123/master.m3u8         → playlist chính
+ *   /v1/media/video-hls/abc123/v0/prog_index.m3u8  → playlist 720p
+ *   /v1/media/video-hls/abc123/v0/fileSequence0.ts → chunk video 720p
+ */
+export const serveVideoHLSController = (req, res, next) => {
+  // req.params.path = mảng các segment sau /video-hls/ (Express 5 path-to-regexp v8 trả về array)
+  // Ví dụ: URL = /video-hls/abc123/v0/file.ts → req.params.path = ['abc123', 'v0', 'file.ts']
+  // Join mảng lại thành đường dẫn: 'abc123/v0/file.ts'
+  const filePath = path.resolve(UPLOAD_VIDEO_DIR, ...req.params.path)
+
+  // Kiểm tra file tồn tại
+  if (!fs.existsSync(filePath)) {
+    return res.status(404).send('File not found')
+  }
+
+  return res.sendFile(filePath)
+}
+
+// Controller lấy trạng thái encode video HLS
+// Frontend gọi API này để biết video encode xong chưa
+// GET /v1/media/video-status/:id
+// Ví dụ: GET /v1/media/video-status/abc123 → { name: 'abc123', status: 'success' }
+export const getVideoStatusController = async (req, res, next) => {
+  const { id } = req.params
+  const data = await getVideoStatusService(id)
+
+  return res.json({
+    message: 'Get video status successfully',
+    data
+  })
 }

@@ -68,3 +68,11 @@ export const RBAC_LEVEL_2 = [
     inherits: [] // client không kế thừa từ role nào cả
   }
 ]
+
+// Trạng thái encode video HLS — lưu trong collection 'videoStatus' để frontend theo dõi tiến trình
+export const EncodingStatus = {
+  PENDING: 'pending', // Video vừa upload, chờ trong queue
+  PROCESSING: 'processing', // Đang encode (ffmpeg đang chạy)
+  SUCCESS: 'success', // Encode xong, HLS sẵn sàng
+  FAILED: 'failed' // Encode lỗi
+}
